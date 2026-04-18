@@ -20,7 +20,7 @@ COPY . .
 
 # Magia: Kompilujemy kod. 
 # Powstaje jeden, mały, samowystarczalny plik wykonywalny o nazwie "main".
-RUN CGO_ENABLED=0 GOOS=linux go build -o main ./main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -o main ./cmd/api/main.go
 
 # ==========================================
 # ETAP 2: PRODUKCJA (Tzw. Runner)
