@@ -1,46 +1,82 @@
-// frontend/src/App.tsx
-import { useState } from 'react';
-import type { AppView, DifficultyLevel } from './types';
+import { useState, useEffect } from 'react';
+import type { AppView, DifficultyLevel } from './types'; // types są w src/types
 import { MainMenu } from './views/MainMenu';
-import { DifficultySelect } from './views/DifficultySelect';
+import { BattleScreen } from './views/BattleScreen';
+import { Tutorial } from './views/Tutorial';
+import { CardShop } from './views/CardShop';
+export default function App() {
+  const [gameState, setGameState] = useState<'menu' | 'game' | 'shop'>('menu');
+  const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('easy');
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [tutorialStep, setTutorialStep] = useState(0);
+  const [hasSeenTutorial, setHasSeenTutorial] = useState(false);
+  const [playerXP, setPlayerXP] = useState(500);
 
-function App() {
-    // Stan przechowujący informację o tym, który ekran wyświetlić
-    const [currentView, setCurrentView] = useState<AppView>('MENU');
+  useEffect(() => {
+    const seen = localStorage.getItem('hasSeenTutorial');
+    if (seen === 'true') {
+      setHasSeenTutorial(true);
+    }
+  }, []);
 
-    // Funkcja, która odpali się po kliknięciu wybranej trudności
-    const handleStartGame = async (difficulty: DifficultyLevel) => {
-        console.log(`Zaczynamy grę na poziomie: ${difficulty}`);
+  const handleStartGame = (selectedDifficulty: 'easy' | 'medium' | 'hard') => {
+    setDifficulty(selectedDifficulty);
 
-        // TUTAJ W PRZYSZŁOŚCI POLECI REQUEST DO BACKENDU:
-        // np. await api.createNewGame(difficulty);
-        // const gameState = await api.getGameState();
+    if (!hasSeenTutorial) {
+      setShowTutorial(true);
+      setTutorialStep(0);
+    } else {
+      setGameState('game');
+    }
+  };
 
-        // Na razie tylko udajemy i przenosimy gracza do "Mapy/Walki" (która na razie jest pusta)
-        setCurrentView('BATTLE');
-    };
+  const handleTutorialNext = () => {
+    if (tutorialStep === 7) {
+      setShowTutorial(false);
+      setHasSeenTutorial(true);
+      localStorage.setItem('hasSeenTutorial', 'true');
+      setGameState('game');
+    } else {
+      setTutorialStep(tutorialStep + 1);
+    }
+  };
 
-    return (
-        <>
-            {currentView === 'MENU' && (
-                <MainMenu onStartGame={() => setCurrentView('DIFFICULTY')} />
-            )}
+  const handleTutorialClose = () => {
+    setShowTutorial(false);
+    setHasSeenTutorial(true);
+    localStorage.setItem('hasSeenTutorial', 'true');
+    setGameState('game');
+  };
 
-            {currentView === 'DIFFICULTY' && (
-                <DifficultySelect
-                    onSelect={handleStartGame}
-                    onBack={() => setCurrentView('MENU')}
-                />
-            )}
-
-            {currentView === 'BATTLE' && (
-                <div style={{ color: 'white', textAlign: 'center', marginTop: '20vh' }}>
-                    <h2>Ładowanie interfejsu walki... (Backend wkrótce dostarczy dane!)</h2>
-                    <button onClick={() => setCurrentView('MENU')}>Anuluj</button>
-                </div>
-            )}
-        </>
-    );
+  return (
+    <div className="size-full">
+      {gameState === 'menu' && (
+        <MainMenu
+          onStartGame={handleStartGame}
+          onOpenShop={() => setGameState('shop')}
+          playerXP={playerXP}
+        />
+      )}
+      {gameState === 'game' && (
+        <GameLevel
+          onEndTurn={() => console.log('Turn ended')}
+          difficulty={difficulty}
+        />
+      )}
+      {gameState === 'shop' && (
+        <CardShop
+          onBack={() => setGameState('menu')}
+          playerXP={playerXP}
+          onPurchase={(cost) => setPlayerXP(playerXP - cost)}
+        />
+      )}
+      {showTutorial && (
+        <Tutorial
+          currentStep={tutorialStep}
+          onNext={handleTutorialNext}
+          onClose={handleTutorialClose}
+        />
+      )}
+    </div>
+  );
 }
-
-export default App;
