@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Heart, AlertTriangle, Settings, HelpCircle } from 'lucide-react';
-import img from "../../imports/image-3.png";
+import img from "../assets/image-3.png";
 
 interface PhoneCard {
   id: number;
@@ -56,10 +56,11 @@ const phoneCards: PhoneCard[] = [
 
 interface GameLevelProps {
   onEndTurn: () => void;
+  onBackToMenu: () => void;
   difficulty: 'easy' | 'medium' | 'hard';
 }
 
-export function GameLevel({ onEndTurn, difficulty }: GameLevelProps) {
+export function GameLevel({ onEndTurn, onBackToMenu, difficulty }: GameLevelProps) {
   const [playerHealth, setPlayerHealth] = useState(80);
   const [playerMaxHealth] = useState(100);
   const [decisionsLeft, setDecisionsLeft] = useState(2);
@@ -129,7 +130,7 @@ export function GameLevel({ onEndTurn, difficulty }: GameLevelProps) {
                 <span>Guide</span>
               </button>
               <button
-                onClick={() => {}}
+                onClick={onBackToMenu}
                 className="w-full px-6 py-3 text-left text-white hover:bg-slate-800 transition-colors"
               >
                 Back to Menu
