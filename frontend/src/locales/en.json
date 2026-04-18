@@ -33,7 +33,16 @@
     "phishingScammer": "Phishing Scammer",
     "phishingQuote": "Click here to claim your prize!",
     "nextAttack": "Next: Attack {{damage}}",
-    "chooseDefense": "Choose your defense actions ({{count}} decisions left)"
+    "chooseDefense": "Choose your defense actions ({{count}} decisions left)",
+    "linkGoblin": "Link Goblin",
+  "scamTornado": "Scam Tornado",
+  "systemFailure": "SYSTEM FAILURE",
+  "neutralized": "NEUTRALIZED",
+  "debug": {
+    "animationTest": "Animation Test",
+    "hitPlayer": "Hit Player (-20 HP)",
+    "hitEnemy": "Attack Enemy (-25 HP)"
+  }
   },
   "settings": {
     "title": "Settings",
