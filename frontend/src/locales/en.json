@@ -126,5 +126,18 @@
         "description": "Use your cards wisely to identify and stop digital threats. Good luck!"
       }
     ]
+  },
+  "selection": {
+    "title": "Prepare for Adventure",
+    "difficultyPrefix": "{{level}} Difficulty",
+    "cardsCount": "Cards: {{current}}/{{max}}",
+    "yourCards": "Your Cards",
+    "adventureCards": "Cards for This Adventure",
+    "noCards": "No cards selected yet",
+    "noCardsDesc": "Click cards on the left to add them",
+    "slotsFilled": "Slots Filled",
+    "slotsCounter": "{{current}} of {{max}} slots",
+    "confirm": "Confirm & Start Adventure",
+    "back": "Back"
   }
 }

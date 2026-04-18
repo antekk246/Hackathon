@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button } from "../components/ui/button";
-import { Card } from "../components/ui/card";
-import { Shield, Settings, ShoppingBag } from "lucide-react";
+import { Shield, Settings, ShoppingBag, LogIn } from "lucide-react";
 import { SettingsModal } from "../components/SettingsModal";
+import { gameApi } from "../api/gameApi";
 
 interface MainMenuProps {
   onStartGame: (difficulty: 'easy' | 'medium' | 'hard') => void;
@@ -14,6 +13,7 @@ interface MainMenuProps {
 export function MainMenu({ onStartGame, onOpenShop, playerXP }: MainMenuProps) {
   const { t, i18n } = useTranslation();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const isLoggedIn = !!localStorage.getItem('token');
 
   return (
     <div className="relative w-full h-full bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 overflow-hidden">
@@ -91,12 +91,21 @@ export function MainMenu({ onStartGame, onOpenShop, playerXP }: MainMenuProps) {
 
         {/* Other buttons */}
         <div className="flex gap-4 mt-8 items-center">
-          <MenuButton
-            icon={<ShoppingBag className="w-5 h-5" />}
-            label={t('mainMenu.investInYourself')}
-            onClick={onOpenShop}
-            highlight
-          />
+          {!isLoggedIn ? (
+            <MenuButton
+              icon={<LogIn className="w-5 h-5" />}
+              label="Login with Google"
+              onClick={() => gameApi.loginWithGoogle()}
+              highlight
+            />
+          ) : (
+            <MenuButton
+              icon={<ShoppingBag className="w-5 h-5" />}
+              label={t('mainMenu.investInYourself')}
+              onClick={onOpenShop}
+              highlight
+            />
+          )}
           <MenuButton
             icon={<Shield className="w-5 h-5" />}
             label={t('mainMenu.securityGuide')}
