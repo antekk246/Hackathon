@@ -58,9 +58,8 @@ export default function App() {
         />
       )}
       {gameState === 'game' && (
-        <GameLevel
-          onEndTurn={() => console.log('Turn ended')}
-          difficulty={difficulty}
+        <BattleScreen
+          onBackToMenu={() => setGameState('menu')}
         />
       )}
       {gameState === 'shop' && (

@@ -190,13 +190,13 @@ export function BattleScreen({ onBackToMenu }: BattleScreenProps) {
         </div>
         <div className="flex justify-center gap-4 overflow-x-auto pb-4">
           {cards.map((card) => (
-            <div
+            <BattleCard
               key={card.id}
-              {...card}
+              card={card}
               isSelected={selectedCard === card.id}
               onSelect={() => setSelectedCard(card.id)}
               disabled={energy < card.cost}
-            div/>
+            />
           ))}
         </div>
 
@@ -212,5 +212,43 @@ export function BattleScreen({ onBackToMenu }: BattleScreenProps) {
         </div>
       </div>
     </div>
+  );
+}
+
+interface BattleCardProps {
+  card: any;
+  isSelected: boolean;
+  onSelect: () => void;
+  disabled: boolean;
+}
+
+function BattleCard({ card, isSelected, onSelect, disabled }: BattleCardProps) {
+  return (
+    <button
+      onClick={onSelect}
+      disabled={disabled}
+      className={`
+        relative w-40 h-56 rounded-xl border-4 transition-all duration-300 flex flex-col overflow-hidden
+        ${isSelected ? 'border-cyan-400 shadow-2xl shadow-cyan-500/50 scale-105 -translate-y-4' : 'border-slate-700'}
+        ${disabled ? 'opacity-40 cursor-not-allowed' : 'hover:scale-105 cursor-pointer'}
+      `}
+    >
+      <div className={`h-24 bg-gradient-to-br ${card.color} flex items-center justify-center text-4xl`}>
+        {card.icon}
+      </div>
+      <div className="flex-1 bg-slate-800 p-3 flex flex-col justify-between text-left">
+        <div>
+          <div className="text-[10px] font-bold text-cyan-400 mb-1">{card.type.toUpperCase()}</div>
+          <div className="text-white font-bold text-sm leading-tight mb-1">{card.title}</div>
+          <div className="text-slate-400 text-[10px] leading-tight">{card.description}</div>
+        </div>
+        <div className="flex justify-between items-center mt-2">
+          <div className="text-yellow-400 font-bold text-xs">{card.effect}</div>
+          <div className="bg-slate-950 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border border-slate-600">
+            {card.cost}
+          </div>
+        </div>
+      </div>
+    </button>
   );
 }
