@@ -1,6 +1,7 @@
 import { ArrowLeft, Lock, TrendingUp } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { gameApi } from '../api/gameApi';
 
 interface Card {
   id: number;
@@ -23,6 +24,31 @@ interface CardShopProps {
 export function CardShop({ onBack, playerXP, onPurchase }: CardShopProps) {
   const { t } = useTranslation();
   const [selectedCard, setSelectedCard] = useState<number | null>(null);
+
+  const handleUpgrade = async (card: Card) => {
+    if (card.upgradeCost && playerXP >= card.upgradeCost) {
+      try {
+        await gameApi.upgradeCard(card.id);
+        onPurchase(card.upgradeCost);
+      } catch (err) {
+        // Fallback dla celów deweloperskich, jeśli backend jeszcze nie zwraca 200 OK
+        console.warn("Backend upgrade nieobsłużony, wykonuję lokalnie:", err);
+        onPurchase(card.upgradeCost);
+      }
+    }
+  };
+
+  const handleUnlock = async (card: Card) => {
+    if (card.unlockCost && playerXP >= card.unlockCost) {
+      try {
+        await gameApi.buyCard(card.id);
+        onPurchase(card.unlockCost);
+      } catch (err) {
+        console.warn("Backend unlock nieobsłużony, wykonuję lokalnie:", err);
+        onPurchase(card.unlockCost);
+      }
+    }
+  };
 
   const allCards: Card[] = [
     {
@@ -160,16 +186,8 @@ export function CardShop({ onBack, playerXP, onPurchase }: CardShopProps) {
             <CardDetailPanel
               card={selected}
               playerXP={playerXP}
-              onUpgrade={() => {
-                if (selected.upgradeCost && playerXP >= selected.upgradeCost) {
-                  onPurchase(selected.upgradeCost);
-                }
-              }}
-              onUnlock={() => {
-                if (selected.unlockCost && playerXP >= selected.unlockCost) {
-                  onPurchase(selected.unlockCost);
-                }
-              }}
+              onUpgrade={() => handleUpgrade(selected)}
+              onUnlock={() => handleUnlock(selected)}
             />
           ) : (
             <>

@@ -126,5 +126,18 @@
         "description": "Używaj kart mądrze, aby rozpoznawać i zatrzymywać cyfrowe zagrożenia. Powodzenia!"
       }
     ]
+  },
+  "selection": {
+    "title": "Przygotuj się do Przygody",
+    "difficultyPrefix": "Poziom {{level}}",
+    "cardsCount": "Karty: {{current}}/{{max}}",
+    "yourCards": "Twoje Karty",
+    "adventureCards": "Karty na tę Przygodę",
+    "noCards": "Nie wybrano jeszcze kart",
+    "noCardsDesc": "Kliknij karty po lewej, aby je dodać",
+    "slotsFilled": "Zajęte Miejsca",
+    "slotsCounter": "{{current}} z {{max}} miejsc",
+    "confirm": "Potwierdź i Rozpocznij Przygodę",
+    "back": "Powrót"
   }
 }
