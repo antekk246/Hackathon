@@ -62,6 +62,10 @@ export default function App() {
         <GameLevel
           onEndTurn={() => console.log('Turn ended')}
           onBackToMenu={() => setGameState('menu')}
+          onShowTutorial={() => {
+            setShowTutorial(true);
+            setTutorialStep(0);
+          }}
           difficulty={difficulty}
         />
       )}

@@ -24,7 +24,7 @@ func HealthCheck(c *gin.Context) {
 	})
 }
 
-func SetupRouter(authH *handler.AuthHandler, advH *handler.AdventureHandler) *gin.Engine {
+func SetupRouter(authH *handler.AuthHandler, advH *handler.AdventureHandler, cardH *handler.CardHandler) *gin.Engine {
 	r := gin.Default()
 	r.GET("/ping", HealthCheck)
 	v1 := r.Group("/api/v1")
@@ -45,6 +45,16 @@ func SetupRouter(authH *handler.AuthHandler, advH *handler.AdventureHandler) *gi
 			protected.POST("/adventures", advH.StartAdventure)
 			protected.GET("/adventures/active", advH.GetActiveAdventure)
 			protected.DELETE("/adventures/:id", advH.EndAdventure)
+
+			// Card routes
+			cards := protected.Group("/cards")
+			{
+				cards.GET("", cardH.GetAllCards)
+				cards.GET("/user", cardH.GetUserCards)
+				cards.GET("/adventure/:id", cardH.GetAdventureCards)
+				cards.POST("/:id/upgrade", cardH.Upgrade)
+				cards.POST("/:id/buy", cardH.BuyCard)
+			}
 		}
 	}
 
