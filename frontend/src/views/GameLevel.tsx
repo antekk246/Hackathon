@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import { Heart, AlertTriangle, Settings, HelpCircle, Globe } from 'lucide-react';
 import { SettingsModal } from '../components/SettingsModal';
 import img from "../assets/image-3.png";
@@ -7,8 +6,8 @@ import img from "../assets/image-3.png";
 interface PhoneCard {
   id: number;
   type: 'block' | 'report' | 'verify' | 'ignore';
-  titleKey: string;
-  descriptionKey: string;
+  title: string;
+  description: string;
   cost: number;
   color: string;
 }
@@ -17,40 +16,40 @@ const phoneCardDefinitions: PhoneCard[] = [
   {
     id: 1,
     type: 'block',
-    titleKey: 'cards.blockSender.title',
-    descriptionKey: 'cards.blockSender.description',
+    title: 'Block Sender',
+    description: 'Block suspicious contact',
     cost: 1,
     color: 'from-red-500 to-red-600'
   },
   {
     id: 2,
     type: 'report',
-    titleKey: 'cards.reportScam.title',
-    descriptionKey: 'cards.reportScam.description',
+    title: 'Report Scam',
+    description: 'Report to authorities',
     cost: 1,
     color: 'from-orange-500 to-orange-600'
   },
   {
     id: 3,
     type: 'verify',
-    titleKey: 'cards.verifySource.title',
-    descriptionKey: 'cards.verifySource.description',
+    title: 'Verify Source',
+    description: 'Check if legitimate',
     cost: 1,
     color: 'from-blue-500 to-blue-600'
   },
   {
     id: 4,
     type: 'ignore',
-    titleKey: 'cards.deleteIgnore.title',
-    descriptionKey: 'cards.deleteIgnore.description',
+    title: 'Delete & Ignore',
+    description: 'Remove without engaging',
     cost: 1,
     color: 'from-gray-500 to-gray-600'
   },
   {
     id: 5,
     type: 'block',
-    titleKey: 'cards.twoFAShield.title',
-    descriptionKey: 'cards.twoFAShield.description',
+    title: '2FA Shield',
+    description: 'Enable authentication',
     cost: 1,
     color: 'from-green-500 to-green-600'
   }
@@ -64,7 +63,6 @@ interface GameLevelProps {
 }
 
 export function GameLevel({ onEndTurn, onBackToMenu, onShowTutorial, difficulty }: GameLevelProps) {
-  const { t } = useTranslation();
   const [playerHealth, setPlayerHealth] = useState(80);
   const [playerMaxHealth] = useState(100);
   const [decisionsLeft, setDecisionsLeft] = useState(2);
@@ -91,14 +89,14 @@ export function GameLevel({ onEndTurn, onBackToMenu, onShowTutorial, difficulty 
       <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-10">
         {/* Decisions left */}
         <div className="flex items-center gap-2 bg-slate-900/80 px-5 py-2 rounded-full border-2 border-yellow-500/50">
-          <span className="text-yellow-400 font-bold text-lg">{t('gameLevel.decisions', { current: decisionsLeft, max: 2 })}</span>
+          <span className="text-yellow-400 font-bold text-lg">Decisions left: {decisionsLeft}/2</span>
         </div>
 
         {/* Progress bar and End Turn button container */}
         <div className="flex-1 mx-8 flex flex-col items-center gap-3">
           <div className="w-full bg-slate-900/80 px-6 py-3 rounded-full border-2 border-cyan-500/50">
             <div className="flex items-center gap-3">
-              <span className="text-white font-bold text-sm whitespace-nowrap">{t('gameLevel.adventureProgress')}</span>
+              <span className="text-white font-bold text-sm whitespace-nowrap">Adventure Progress</span>
               <div className="flex-1 h-4 bg-slate-700 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-cyan-500 to-blue-600 transition-all duration-500"
@@ -114,7 +112,7 @@ export function GameLevel({ onEndTurn, onBackToMenu, onShowTutorial, difficulty 
             onClick={onEndTurn}
             className="px-12 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold rounded-full shadow-lg shadow-cyan-500/40 transition-all transform hover:scale-105 border-2 border-cyan-300/50 text-lg"
           >
-            {t('gameLevel.endTurn')}
+            End Turn
           </button>
         </div>
 
@@ -137,7 +135,7 @@ export function GameLevel({ onEndTurn, onBackToMenu, onShowTutorial, difficulty 
                 className="w-full px-6 py-3 text-left text-white hover:bg-slate-800 transition-colors flex items-center gap-2"
               >
                 <HelpCircle className="w-5 h-5" />
-                <span>{t('gameLevel.guide')}</span>
+                <span>Guide</span>
               </button>
               <button
                 onClick={() => {
@@ -147,13 +145,13 @@ export function GameLevel({ onEndTurn, onBackToMenu, onShowTutorial, difficulty 
                 className="w-full px-6 py-3 text-left text-white hover:bg-slate-800 transition-colors flex items-center gap-2"
               >
                 <Globe className="w-5 h-5" />
-                <span>{t('mainMenu.settings')}</span>
+                <span>Settings</span>
               </button>
               <button
                 onClick={onBackToMenu}
                 className="w-full px-6 py-3 text-left text-white hover:bg-slate-800 transition-colors"
               >
-                {t('gameLevel.backToMenu')}
+                Back to Menu
               </button>
             </div>
           )}
@@ -182,7 +180,7 @@ export function GameLevel({ onEndTurn, onBackToMenu, onShowTutorial, difficulty 
             current={playerHealth}
             max={playerMaxHealth}
             color="blue"
-            label={t('gameLevel.you')}
+            label="You"
           />
         </div>
 
@@ -202,22 +200,22 @@ export function GameLevel({ onEndTurn, onBackToMenu, onShowTutorial, difficulty 
               <div className="w-56 h-72 bg-gradient-to-br from-red-900 to-purple-900 rounded-2xl flex items-center justify-center border-4 border-red-500 shadow-2xl shadow-red-500/50">
                 <div className="text-center px-4">
                   <AlertTriangle className="w-20 h-20 text-red-400 mx-auto mb-2 animate-pulse" />
-                  <div className="text-xl font-bold text-red-300">{t('gameLevel.phishingScammer')}</div>
+                  <div className="text-xl font-bold text-red-300">Phishing Scammer</div>
                   <div className="text-xs text-red-400 mt-1">
-                    "{t('gameLevel.phishingQuote')}"
+                    "Click here to claim your prize!"
                   </div>
                 </div>
               </div>
             )}
             <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
-              {t('gameLevel.nextAttack', { damage: 15 })}
+              Next Attack: 15 Damage
             </div>
           </div>
           <HealthBar
             current={enemyHealth}
             max={enemyMaxHealth}
             color="red"
-            label={t('gameLevel.scammer')}
+            label="Scammer"
           />
         </div>
       </div>
@@ -225,7 +223,7 @@ export function GameLevel({ onEndTurn, onBackToMenu, onShowTutorial, difficulty 
       {/* Phone screen cards */}
       <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-slate-950 via-slate-900/95 to-transparent pt-10">
         <div className="text-center text-slate-400 text-xs mb-3 font-semibold">
-          {t('gameLevel.chooseDefense', { count: decisionsLeft })}
+          Choose your defense ({decisionsLeft} remaining)
         </div>
         <div className="flex justify-center items-end gap-1" style={{ perspective: '1000px' }}>
           {phoneCardDefinitions.map((card, index) => {
@@ -337,7 +335,6 @@ interface PhoneScreenCardProps {
 }
 
 function PhoneScreenCard({ card, selected, onSelect, disabled }: PhoneScreenCardProps) {
-  const { t } = useTranslation();
   return (
     <button
       onClick={onSelect}
@@ -360,11 +357,11 @@ function PhoneScreenCard({ card, selected, onSelect, disabled }: PhoneScreenCard
         <div className={`absolute inset-0 pt-7 pb-3 px-2 bg-gradient-to-br ${card.color} flex flex-col justify-between`}>
           <div className="text-white text-center">
             <div className="text-[10px] font-bold mb-1 opacity-80">{card.type.toUpperCase()}</div>
-            <div className="text-xs font-bold leading-tight">{t(card.titleKey)}</div>
+            <div className="text-xs font-bold leading-tight">{card.title}</div>
           </div>
 
           <div className="text-white text-[10px] text-center opacity-90 leading-tight">
-            {t(card.descriptionKey)}
+            {card.description}
           </div>
         </div>
 

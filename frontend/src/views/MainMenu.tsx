@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { Shield, Settings, ShoppingBag } from "lucide-react";
@@ -12,7 +11,6 @@ interface MainMenuProps {
 }
 
 export function MainMenu({ onStartGame, onOpenShop, playerXP }: MainMenuProps) {
-  const { t, i18n } = useTranslation();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   return (
@@ -48,41 +46,41 @@ export function MainMenu({ onStartGame, onOpenShop, playerXP }: MainMenuProps) {
             <Shield className="w-16 h-16 text-cyan-400 animate-pulse" />
           </div>
           <h1 className="text-7xl font-bold mb-4 bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-500 bg-clip-text text-transparent">
-            {t('mainMenu.title')}
+            Cyber Guardian
           </h1>
           <p className="text-2xl text-blue-300 font-medium">
-            {t('mainMenu.subtitle')}
+            Protect Your Digital World
           </p>
           <div className="mt-4 text-yellow-400 text-xl font-bold">
-            {t('mainMenu.yourXP', { xp: playerXP })}
+            Your XP: {playerXP}
           </div>
           <p className="text-lg text-slate-400 mt-2">
-            {t('mainMenu.description')}
+            Face phishing attempts, malware threats, and social engineering attacks in this roguelike adventure
           </p>
         </div>
 
         {/* Difficulty Selection */}
         <div className="mb-8">
-          <h2 className="text-2xl font-bold text-white text-center mb-6">{t('mainMenu.chooseAdventure')}</h2>
+          <h2 className="text-2xl font-bold text-white text-center mb-6">Choose Your Adventure</h2>
           <div className="flex gap-6">
             <DifficultyButton
               difficulty="easy"
-              label={t('mainMenu.easy.label')}
-              description={t('mainMenu.easy.description')}
+              label="Easy"
+              description="Perfect for beginners"
               color="from-green-500 to-green-600"
               onClick={() => onStartGame('easy')}
             />
             <DifficultyButton
               difficulty="medium"
-              label={t('mainMenu.medium.label')}
-              description={t('mainMenu.medium.description')}
+              label="Medium"
+              description="Challenge yourself"
               color="from-yellow-500 to-orange-600"
               onClick={() => onStartGame('medium')}
             />
             <DifficultyButton
               difficulty="hard"
-              label={t('mainMenu.hard.label')}
-              description={t('mainMenu.hard.description')}
+              label="Hard"
+              description="Maximum difficulty"
               color="from-red-500 to-red-600"
               onClick={() => onStartGame('hard')}
             />
@@ -93,51 +91,25 @@ export function MainMenu({ onStartGame, onOpenShop, playerXP }: MainMenuProps) {
         <div className="flex gap-4 mt-8 items-center">
           <MenuButton
             icon={<ShoppingBag className="w-5 h-5" />}
-            label={t('mainMenu.investInYourself')}
+            label="Invest in Yourself"
             onClick={onOpenShop}
             highlight
           />
           <MenuButton
             icon={<Shield className="w-5 h-5" />}
-            label={t('mainMenu.securityGuide')}
+            label="Security Guide"
             onClick={() => {}}
           />
-          <div className="flex items-center gap-2">
-            <MenuButton
-              icon={<Settings className="w-5 h-5" />}
-              label={t('mainMenu.settings')}
-              onClick={() => setIsSettingsOpen(true)}
-            />
-            <div className="flex gap-2 ml-2">
-              <button
-                onClick={() => i18n.changeLanguage('pl')}
-                className={`p-2 rounded-lg border-2 transition-all hover:scale-110 ${
-                  i18n.language.startsWith('pl')
-                    ? 'border-cyan-400 bg-cyan-400/20'
-                    : 'border-slate-700 bg-slate-800/50 hover:border-slate-500'
-                }`}
-                title="Polski"
-              >
-                <span className="text-xl">🇵🇱</span>
-              </button>
-              <button
-                onClick={() => i18n.changeLanguage('en')}
-                className={`p-2 rounded-lg border-2 transition-all hover:scale-110 ${
-                  i18n.language.startsWith('en')
-                    ? 'border-cyan-400 bg-cyan-400/20'
-                    : 'border-slate-700 bg-slate-800/50 hover:border-slate-500'
-                }`}
-                title="English"
-              >
-                <span className="text-xl">🇬🇧</span>
-              </button>
-            </div>
-          </div>
+          <MenuButton
+            icon={<Settings className="w-5 h-5" />}
+            label="Settings"
+            onClick={() => setIsSettingsOpen(true)}
+          />
         </div>
 
         {/* Footer */}
         <div className="absolute bottom-8 text-center text-slate-500">
-          <p className="text-sm">{t('mainMenu.footer')}</p>
+          <p className="text-sm">Stay safe. Stay smart. Stay secure.</p>
         </div>
       </div>
 

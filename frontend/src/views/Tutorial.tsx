@@ -1,5 +1,4 @@
 import { X } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 import guideImg from "../assets/image-4.png";
 
 interface TutorialProps {
@@ -8,17 +7,21 @@ interface TutorialProps {
   onClose: () => void;
 }
 
+const TUTORIAL_STEPS = [
+  { title: 'Welcome to the Game', description: 'Learn how to protect yourself from cyber threats in this roguelike adventure!' },
+  { title: 'Player Health', description: 'This is your health bar. Defeat enemies to earn rewards and level up!' },
+  { title: 'Enemy Threats', description: 'Defeat different types of enemies to progress through the adventure.' },
+  { title: 'Your Health Points', description: 'Keep your health above zero to survive. Use cards strategically!' },
+  { title: 'Play Your Cards', description: 'Select and play cards from your deck to defeat enemies.' },
+  { title: 'Track Progress', description: 'Monitor your progress through each level.' },
+  { title: 'Upgrade Your Cards', description: 'Visit the card shop to upgrade and unlock new abilities.' },
+  { title: 'Ready to Start?', description: 'You\'re all set! Click Start to begin your adventure.' }
+];
+
 export function Tutorial({ currentStep, onNext, onClose }: TutorialProps) {
-  const { t } = useTranslation();
-  
-  // We use an array of objects to map highlights, but titles/descriptions come from i18n
-  const highlights = ['none', 'player', 'enemy', 'health', 'cards', 'progress', 'none', 'none'];
-  
-  const stepTitle = t(`tutorial.steps.${currentStep}.title`);
-  const stepDescription = t(`tutorial.steps.${currentStep}.description`);
-  
-  const totalSteps = 8;
+  const totalSteps = TUTORIAL_STEPS.length;
   const isLastStep = currentStep === totalSteps - 1;
+  const step = TUTORIAL_STEPS[currentStep] || TUTORIAL_STEPS[0];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -42,8 +45,8 @@ export function Tutorial({ currentStep, onNext, onClose }: TutorialProps) {
           </div>
 
           <div className="flex-1">
-            <h2 className="text-3xl font-bold text-cyan-400 mb-3">{stepTitle}</h2>
-            <p className="text-xl text-white leading-relaxed">{stepDescription}</p>
+            <h2 className="text-3xl font-bold text-cyan-400 mb-3">{step.title}</h2>
+            <p className="text-xl text-white leading-relaxed">{step.description}</p>
           </div>
         </div>
 
@@ -66,13 +69,13 @@ export function Tutorial({ currentStep, onNext, onClose }: TutorialProps) {
         {/* Navigation */}
         <div className="flex justify-between items-center">
           <div className="text-slate-400 text-sm">
-            {t('tutorial.stepCounter', { current: currentStep + 1, total: totalSteps })}
+            Step {currentStep + 1} of {totalSteps}
           </div>
           <button
             onClick={onNext}
             className="px-8 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-xl font-bold text-lg hover:scale-105 transition-transform shadow-lg"
           >
-            {isLastStep ? t('tutorial.start') : t('tutorial.next')}
+            {isLastStep ? 'Start Game' : 'Next'}
           </button>
         </div>
       </div>
