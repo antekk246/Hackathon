@@ -1,0 +1,130 @@
+{
+  "mainMenu": {
+    "title": "PKO XP: Gaming",
+    "subtitle": "Broń się przed cyfrowymi zagrożeniami",
+    "yourXP": "Twoje XP: {{xp}}",
+    "description": "Naucz się rozpoznawać oszustwa, fałszywe płatności i zagrożenia online",
+    "chooseAdventure": "Wybierz Przygodę",
+    "easy": {
+      "label": "Łatwy",
+      "description": "Naucz się podstaw"
+    },
+    "medium": {
+      "label": "Średni",
+      "description": "Przetestuj swoje umiejętności"
+    },
+    "hard": {
+      "label": "Trudny",
+      "description": "Wyzwanie dla eksperta"
+    },
+    "investInYourself": "Inwestuj w Siebie",
+    "securityGuide": "Przewodnik Bezpieczeństwa",
+    "settings": "Ustawienia",
+    "footer": "Bądź bezpieczny online • Poznaj zagrożenia • Chroń siebie"
+  },
+  "gameLevel": {
+    "decisions": "Decyzje: {{current}}/{{max}}",
+    "adventureProgress": "Postęp Przygody",
+    "endTurn": "Zakończ Turę",
+    "guide": "Przewodnik",
+    "backToMenu": "Powrót do Menu",
+    "you": "Ty",
+    "scammer": "Oszust",
+    "phishingScammer": "Oszust Phishingowy",
+    "phishingQuote": "Kliknij tutaj, aby odebrać nagrodę!",
+    "nextAttack": "Następny: Atak {{damage}}",
+    "chooseDefense": "Wybierz akcje obronne (zostało {{count}} decyzji)"
+  },
+  "settings": {
+    "title": "Ustawienia",
+    "language": "Język",
+    "close": "Zamknij",
+    "english": "Angielski",
+    "polish": "Polski"
+  },
+  "cards": {
+    "blockSender": {
+      "title": "Zablokuj Nadawcę",
+      "description": "Zablokuj podejrzany kontakt"
+    },
+    "reportScam": {
+      "title": "Zgłoś Oszustwo",
+      "description": "Zgłoś do odpowiednich służb"
+    },
+    "verifySource": {
+      "title": "Weryfikuj Źródło",
+      "description": "Sprawdź czy to legalne"
+    },
+    "deleteIgnore": {
+      "title": "Usuń i Ignoruj",
+      "description": "Usuń bez angażowania się"
+    },
+    "twoFAShield": {
+      "title": "Tarcza 2FA",
+      "description": "Włącz autoryzację"
+    },
+    "strongPassword": {
+      "title": "Silne Hasło",
+      "description": "Stwórz bezpieczne hasło"
+    },
+    "vpnShield": {
+      "title": "Tarcza VPN",
+      "description": "Chroń swoje połączenie"
+    },
+    "evidenceCollect": {
+      "title": "Zbieranie Dowodów",
+      "description": "Zbierz dowody oszustwa"
+    }
+  },
+  "shop": {
+    "title": "Inwestuj w Siebie",
+    "back": "Powrót",
+    "yourCards": "Twoje Karty",
+    "unlockNewCards": "Odblokuj Nowe Karty",
+    "type": "Typ",
+    "description": "Opis",
+    "currentLevel": "Obecny Poziom",
+    "level": "Poziom {{level}}",
+    "upgrade": "Ulepsz ({{cost}} XP)",
+    "unlock": "Odblokuj ({{cost}} XP)"
+  },
+  "tutorial": {
+    "stepCounter": "Krok {{current}} z {{total}}",
+    "next": "Dalej",
+    "start": "Zacznij Grę!",
+    "steps": [
+      {
+        "title": "Witaj w PKO XP: Gaming!",
+        "description": "Jestem Twoim przewodnikiem. Nauczę Cię, jak bronić się przed cyfrowymi zagrożeniami!"
+      },
+      {
+        "title": "Twoja Postać",
+        "description": "To Ty! Jesteś cyber-obrońcą chroniącym ludzi przed oszustwami online."
+      },
+      {
+        "title": "Zagrożenie",
+        "description": "To są oszuści i cyfrowe zagrożenia, które musisz pokonać!"
+      },
+      {
+        "title": "Paski Zdrowia",
+        "description": "Dbaj o swoje zdrowie! Jeśli spadnie do zera, przegrywasz. Pokonuj wrogów, redukując ich punkty życia."
+      },
+      {
+        "title": "Karty Decyzji",
+        "description": "Te ekrany telefonów to Twoje działania. Możesz zagrać 2 karty na turę, aby się bronić!"
+      },
+      {
+        "title": "Postęp Przygody",
+        "description": "Śledź swój postęp w przygodzie. Ukończ wszystkie starcia, aby zdobyć XP!"
+      },
+      {
+        "title": "Zdobywaj XP!",
+        "description": "Wygrywaj przygody, aby zdobywać XP! Używaj XP, aby odblokowywać i ulepszać karty w sekcji \"Inwestuj w Siebie\"."
+      },
+      {
+        "title": "Gotowy do Startu!",
+        "description": "Używaj kart mądrze, aby rozpoznawać i zatrzymywać cyfrowe zagrożenia. Powodzenia!"
+      }
+    ]
+  }
+}

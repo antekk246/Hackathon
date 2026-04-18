@@ -1,6 +1,9 @@
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { Shield, Settings, ShoppingBag } from "lucide-react";
+import { SettingsModal } from "../components/SettingsModal";
 
 interface MainMenuProps {
   onStartGame: (difficulty: 'easy' | 'medium' | 'hard') => void;
@@ -9,6 +12,9 @@ interface MainMenuProps {
 }
 
 export function MainMenu({ onStartGame, onOpenShop, playerXP }: MainMenuProps) {
+  const { t } = useTranslation();
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
   return (
     <div className="relative w-full h-full bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 overflow-hidden">
       {/* Animated background grid */}
@@ -42,41 +48,41 @@ export function MainMenu({ onStartGame, onOpenShop, playerXP }: MainMenuProps) {
             <Shield className="w-16 h-16 text-cyan-400 animate-pulse" />
           </div>
           <h1 className="text-7xl font-bold mb-4 bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-500 bg-clip-text text-transparent">
-            PKO XP: Gaming
+            {t('mainMenu.title')}
           </h1>
           <p className="text-2xl text-blue-300 font-medium">
-            Defend Against Digital Threats
+            {t('mainMenu.subtitle')}
           </p>
           <div className="mt-4 text-yellow-400 text-xl font-bold">
-            Your XP: {playerXP}
+            {t('mainMenu.yourXP', { xp: playerXP })}
           </div>
           <p className="text-lg text-slate-400 mt-2">
-            Learn to spot scams, fake payments, and online dangers
+            {t('mainMenu.description')}
           </p>
         </div>
 
         {/* Difficulty Selection */}
         <div className="mb-8">
-          <h2 className="text-2xl font-bold text-white text-center mb-6">Choose Adventure</h2>
+          <h2 className="text-2xl font-bold text-white text-center mb-6">{t('mainMenu.chooseAdventure')}</h2>
           <div className="flex gap-6">
             <DifficultyButton
               difficulty="easy"
-              label="Easy"
-              description="Learn the basics"
+              label={t('mainMenu.easy.label')}
+              description={t('mainMenu.easy.description')}
               color="from-green-500 to-green-600"
               onClick={() => onStartGame('easy')}
             />
             <DifficultyButton
               difficulty="medium"
-              label="Medium"
-              description="Test your skills"
+              label={t('mainMenu.medium.label')}
+              description={t('mainMenu.medium.description')}
               color="from-yellow-500 to-orange-600"
               onClick={() => onStartGame('medium')}
             />
             <DifficultyButton
               difficulty="hard"
-              label="Hard"
-              description="Expert challenge"
+              label={t('mainMenu.hard.label')}
+              description={t('mainMenu.hard.description')}
               color="from-red-500 to-red-600"
               onClick={() => onStartGame('hard')}
             />
@@ -87,27 +93,32 @@ export function MainMenu({ onStartGame, onOpenShop, playerXP }: MainMenuProps) {
         <div className="flex gap-4 mt-8">
           <MenuButton
             icon={<ShoppingBag className="w-5 h-5" />}
-            label="Invest in Yourself"
+            label={t('mainMenu.investInYourself')}
             onClick={onOpenShop}
             highlight
           />
           <MenuButton
             icon={<Shield className="w-5 h-5" />}
-            label="Security Guide"
+            label={t('mainMenu.securityGuide')}
             onClick={() => {}}
           />
           <MenuButton
             icon={<Settings className="w-5 h-5" />}
-            label="Settings"
-            onClick={() => {}}
+            label={t('mainMenu.settings')}
+            onClick={() => setIsSettingsOpen(true)}
           />
         </div>
 
         {/* Footer */}
         <div className="absolute bottom-8 text-center text-slate-500">
-          <p className="text-sm">Stay safe online • Know the threats • Protect yourself</p>
+          <p className="text-sm">{t('mainMenu.footer')}</p>
         </div>
       </div>
+
+      <SettingsModal 
+        isOpen={isSettingsOpen} 
+        onOpenChange={setIsSettingsOpen} 
+      />
     </div>
   );
 }

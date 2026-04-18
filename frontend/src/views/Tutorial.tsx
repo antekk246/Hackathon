@@ -1,4 +1,5 @@
 import { X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import guideImg from "../assets/image-4.png";
 
 interface TutorialProps {
@@ -7,53 +8,17 @@ interface TutorialProps {
   onClose: () => void;
 }
 
-const tutorialSteps = [
-  {
-    title: 'Welcome to PKO XP: Gaming!',
-    description: 'I\'m your guide. I\'ll teach you how to defend against digital threats!',
-    highlight: 'none'
-  },
-  {
-    title: 'Your Character',
-    description: 'This is you! You\'re a cyber defender protecting people from online scams.',
-    highlight: 'player'
-  },
-  {
-    title: 'The Threat',
-    description: 'These are the scammers and digital threats you need to defeat!',
-    highlight: 'enemy'
-  },
-  {
-    title: 'Health Bars',
-    description: 'Keep your health up! If it reaches zero, you lose. Defeat enemies by reducing their health.',
-    highlight: 'health'
-  },
-  {
-    title: 'Decision Cards',
-    description: 'These phone screens are your actions. You can play 2 cards per turn to defend yourself!',
-    highlight: 'cards'
-  },
-  {
-    title: 'Adventure Progress',
-    description: 'Track your progress through the adventure. Complete all encounters to win XP!',
-    highlight: 'progress'
-  },
-  {
-    title: 'Earn XP!',
-    description: 'Win adventures to earn XP! Use XP to unlock and upgrade cards in "Invest in Yourself".',
-    highlight: 'none'
-  },
-  {
-    title: 'Ready to Start!',
-    description: 'Use your cards wisely to identify and stop digital threats. Good luck!',
-    highlight: 'none'
-  }
-];
-
 export function Tutorial({ currentStep, onNext, onClose }: TutorialProps) {
-  const step = tutorialSteps[currentStep];
-  const isLastStep = currentStep === tutorialSteps.length - 1;
-  const totalSteps = tutorialSteps.length;
+  const { t } = useTranslation();
+  
+  // We use an array of objects to map highlights, but titles/descriptions come from i18n
+  const highlights = ['none', 'player', 'enemy', 'health', 'cards', 'progress', 'none', 'none'];
+  
+  const stepTitle = t(`tutorial.steps.${currentStep}.title`);
+  const stepDescription = t(`tutorial.steps.${currentStep}.description`);
+  
+  const totalSteps = 8;
+  const isLastStep = currentStep === totalSteps - 1;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -77,14 +42,14 @@ export function Tutorial({ currentStep, onNext, onClose }: TutorialProps) {
           </div>
 
           <div className="flex-1">
-            <h2 className="text-3xl font-bold text-cyan-400 mb-3">{step.title}</h2>
-            <p className="text-xl text-white leading-relaxed">{step.description}</p>
+            <h2 className="text-3xl font-bold text-cyan-400 mb-3">{stepTitle}</h2>
+            <p className="text-xl text-white leading-relaxed">{stepDescription}</p>
           </div>
         </div>
 
         {/* Progress dots */}
         <div className="flex justify-center gap-2 mb-6">
-          {tutorialSteps.map((_, index) => (
+          {[...Array(totalSteps)].map((_, index) => (
             <div
               key={index}
               className={`w-3 h-3 rounded-full transition-all duration-300 ${
@@ -101,13 +66,13 @@ export function Tutorial({ currentStep, onNext, onClose }: TutorialProps) {
         {/* Navigation */}
         <div className="flex justify-between items-center">
           <div className="text-slate-400 text-sm">
-            Step {currentStep + 1} of {totalSteps}
+            {t('tutorial.stepCounter', { current: currentStep + 1, total: totalSteps })}
           </div>
           <button
             onClick={onNext}
             className="px-8 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-xl font-bold text-lg hover:scale-105 transition-transform shadow-lg"
           >
-            {isLastStep ? 'Start Game!' : 'Next'}
+            {isLastStep ? t('tutorial.start') : t('tutorial.next')}
           </button>
         </div>
       </div>
