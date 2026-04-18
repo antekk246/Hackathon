@@ -68,9 +68,10 @@ func main() {
 	userRepo := domain.NewUserRepository(db)
 	adventureRepo := domain.NewAdventureRepository(db)
 	cardRepo := domain.NewCardRepository(db)
+	roomRepo := domain.NewRoomRepository(db)
 
 	authHandler := handler.NewAuthHandler(userRepo, oauthConf)
-	adventureHandler := handler.NewAdventureHandler(adventureRepo, cardRepo)
+	adventureHandler := handler.NewAdventureHandler(adventureRepo, cardRepo, roomRepo)
 	cardHandler := handler.NewCardHandler(cardRepo, userRepo)
 
 	r := api.SetupRouter(authHandler, adventureHandler, cardHandler)

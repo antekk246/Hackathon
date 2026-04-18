@@ -24,7 +24,7 @@ func HealthCheck(c *gin.Context) {
 	})
 }
 
-func SetupRouter(authH *handler.AuthHandler, advH *handler.AdventureHandler) *gin.Engine {
+func SetupRouter(authH *handler.AuthHandler, adventureH *handler.AdventureHandler, cardH *handler.CardHandler) *gin.Engine {
 	r := gin.Default()
 	r.GET("/ping", HealthCheck)
 	v1 := r.Group("/api/v1")
@@ -41,10 +41,22 @@ func SetupRouter(authH *handler.AuthHandler, advH *handler.AdventureHandler) *gi
 		protected := v1.Group("/")
 		protected.Use(middleware.JWTAuth())
 		{
-			protected.GET("/", someFunc)
-			protected.POST("/adventures", advH.StartAdventure)
-			protected.GET("/adventures/active", advH.GetActiveAdventure)
-			protected.DELETE("/adventures/:id", advH.EndAdventure)
+			// Adventure routes
+			adventures := protected.Group("/adventures")
+			{
+				adventures.POST("", adventureH.StartAdventure)
+				adventures.GET("/active", adventureH.GetActiveAdventure)
+				adventures.POST("/end", adventureH.EndUsersAdventure)
+			}
+			// Card routes
+			cards := protected.Group("/cards")
+			{
+				cards.GET("/", cardH.GetAllCards)                    // GET /api/v1/cards
+				cards.GET("/user", cardH.GetUserCards)               // GET /api/v1/cards/user
+				cards.GET("/adventure/:id", cardH.GetAdventureCards) // GET /api/v1/cards/adventure/1
+				cards.POST("/:id/upgrade", cardH.Upgrade)            // POST /api/v1/cards/1/upgrade
+				cards.POST("/:id/buy", cardH.BuyCard)
+			}
 		}
 	}
 

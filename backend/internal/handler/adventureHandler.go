@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -14,14 +13,15 @@ import (
 
 type AdventureHandler struct {
 	Repo     domain.AdventureRepository
-	CardRepo domain.CardRepository // Added this
+	CardRepo domain.CardRepository
+	RoomRepo domain.RoomRepository
 }
 
-// Update the constructor
-func NewAdventureHandler(repo domain.AdventureRepository, cardRepo domain.CardRepository) *AdventureHandler {
+func NewAdventureHandler(repo domain.AdventureRepository, cardRepo domain.CardRepository, roomRepo domain.RoomRepository) *AdventureHandler {
 	return &AdventureHandler{
 		Repo:     repo,
 		CardRepo: cardRepo,
+		RoomRepo: roomRepo,
 	}
 }
 
@@ -99,11 +99,12 @@ func (h *AdventureHandler) StartAdventure(c *gin.Context) {
 	}
 
 	newAdventure := models.Adventure{
-		UserID:   userID,
-		Name:     fmt.Sprintf("Adventure Level %d", req.Difficulty),
-		Level:    req.Difficulty,
-		Progress: 0,
-		Cards:    cards, // GORM creates the many-to-many links here
+		UserID:       userID,
+		Name:         fmt.Sprintf("Adventure Level %d", req.Difficulty),
+		Level:        req.Difficulty,
+		Progress:     0,
+		PlayerHealth: 900,
+		Cards:        cards, // GORM creates the many-to-many links here
 	}
 
 	if err := h.Repo.Create(&newAdventure); err != nil {
@@ -155,32 +156,81 @@ func (h *AdventureHandler) EndUsersAdventure(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Adventure ended successfully"})
 }
 
-func (h *AdventureHandler) EndAdventure(c *gin.Context) {
-	userIDVal, exists := c.Get("userID")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		return
-	}
+// GetCurrentRoom returns the fully populated data for the player's current location
+func (h *AdventureHandler) GetCurrentRoom(c *gin.Context) {
+	userIDVal, _ := c.Get("userID")
 	userID := userIDVal.(uint)
 
-	adventureID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	// 1. Get the active adventure
+	adventure, err := h.Repo.GetByUserID(userID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid adventure ID"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "No active adventure found"})
 		return
 	}
 
-	// Pass BOTH IDs to the repository
-	err = h.Repo.DeleteSecure(uint(adventureID), userID)
-
+	// 2. Fetch the room using the Adventure's CurrentRoomID
+	room, err := h.RoomRepo.GetRoomWithDetails(adventure.CurrentRoomID)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			// This now triggers if the ID is wrong OR if the user doesn't own it
-			c.JSON(http.StatusForbidden, gin.H{"error": "Adventure not found or access denied"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load room details"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Adventure ended successfully"})
+	c.JSON(http.StatusOK, room)
+}
+
+// AdvanceRoom moves the player to the next node on the map
+func (h *AdventureHandler) AdvanceRoom(c *gin.Context) {
+	userIDVal, _ := c.Get("userID")
+	userID := userIDVal.(uint)
+
+	// 1. Get the active adventure
+	adventure, err := h.Repo.GetByUserID(userID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "No active adventure found"})
+		return
+	}
+
+	// 2. Fetch the current room to verify it's cleared
+	currentRoom, err := h.RoomRepo.GetRoomWithDetails(adventure.CurrentRoomID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to verify current room"})
+		return
+	}
+
+	// 3. SECURITY CHECK: Ensure the room is actually cleared before advancing
+	if !currentRoom.IsCleared {
+		c.JSON(http.StatusForbidden, gin.H{
+			"error": "You must complete the current room before advancing.",
+			"code":  "ROOM_NOT_CLEARED",
+		})
+		return
+	}
+
+	// 4. Check for victory condition (NextRoomID is nil)
+	if currentRoom.NextRoomID == nil {
+		// Run complete! End the adventure.
+		_ = h.Repo.DeleteByUserID(userID)
+
+		c.JSON(http.StatusOK, gin.H{
+			"status":  "victory",
+			"message": "Congratulations! You have completed the adventure.",
+		})
+		return
+	}
+
+	// 5. Update the Adventure progress
+	adventure.CurrentRoomID = *currentRoom.NextRoomID
+	adventure.Progress += 1
+
+	if err := h.Repo.Update(adventure); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to move to next room"})
+		return
+	}
+
+	// 6. Fetch and return the new room
+	newRoom, _ := h.RoomRepo.GetRoomWithDetails(adventure.CurrentRoomID)
+	c.JSON(http.StatusOK, gin.H{
+		"status": "advanced",
+		"room":   newRoom,
+	})
 }

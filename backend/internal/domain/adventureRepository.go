@@ -2,7 +2,10 @@ package domain
 
 import (
 	"backend/internal/models"
+	"fmt"
+	"math/rand"
 
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -41,9 +44,114 @@ func (r *gormAdventureRepo) GetByUserID(userID uint) (*models.Adventure, error) 
 }
 
 func (r *gormAdventureRepo) Create(adventure *models.Adventure) error {
-	return r.DB.Create(adventure).Error
-}
+	roomCount := 5 * adventure.Level
 
+	return r.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(adventure).Error; err != nil {
+			return err
+		}
+
+		var lastRoomID *uint
+		advLevel := adventure.Level
+
+		// Generate Rooms in REVERSE
+		for i := roomCount; i > 0; i-- {
+			specificLevel := advLevel + uint(rand.Intn(3))
+
+			// 1. Identify if this is the final room (Boss Room)
+			isBossRoom := (i == roomCount)
+
+			var roomType string
+			if isBossRoom {
+				roomType = "fight"
+				specificLevel += 2 // Boost the boss level by 2!
+			} else {
+				// Normal room logic: 25% Events, 75% Fights
+				roomType = "fight"
+				if rand.Float32() < 0.25 {
+					roomType = "event"
+				}
+			}
+
+			room := models.Room{
+				AdventureID: adventure.ID,
+				Type:        roomType,
+				NextRoomID:  lastRoomID,
+			}
+
+			// If you eventually add an "IsBoss" boolean to your Room model,
+			// you can easily set it here:
+			// room.IsBoss = isBossRoom
+
+			if roomType == "fight" {
+				var enemyIDs []uint
+
+				// Fetch matching enemies based on BOTH level and the isBoss flag
+				err := tx.Model(&models.Enemy{}).
+					Where("enemy_level = ? AND is_boss = ?", specificLevel, isBossRoom).
+					Pluck("id", &enemyIDs).Error
+
+				if err != nil {
+					return fmt.Errorf("failed to fetch enemies: %w", err)
+				}
+
+				// FALLBACK: If you don't have a boss at this exact specificLevel yet,
+				// fall back to fetching ANY enemy that matches the boss requirement.
+				if len(enemyIDs) == 0 {
+					err = tx.Model(&models.Enemy{}).
+						Where("is_boss = ?", isBossRoom).
+						Pluck("id", &enemyIDs).Error
+
+					if err != nil || len(enemyIDs) == 0 {
+						return fmt.Errorf("database missing required enemy data (isBoss: %v)", isBossRoom)
+					}
+				}
+
+				// Pick a random enemy from the results
+				randomEnemyID := enemyIDs[rand.Intn(len(enemyIDs))]
+
+				fight := models.Fight{
+					EnemyID:             randomEnemyID,
+					PlayerTurn:          true,
+					CurrentPlayerHealth: 100,
+					Cards:               datatypes.JSON([]byte(`[]`)),
+				}
+
+				if err := tx.Create(&fight).Error; err != nil {
+					return err
+				}
+				room.FightID = &fight.ID
+
+			} else {
+				// Event Logic
+				reward := models.Reward{
+					RewardLevel:   specificLevel,
+					RewardContent: datatypes.JSON([]byte(fmt.Sprintf(`{"gold": %d}`, specificLevel*25))),
+				}
+				if err := tx.Create(&reward).Error; err != nil {
+					return err
+				}
+
+				event := models.Event{
+					RewardID:    &reward.ID,
+					CardsOnHand: datatypes.JSON([]byte(`[]`)),
+				}
+				if err := tx.Create(&event).Error; err != nil {
+					return err
+				}
+				room.EventID = &event.ID
+			}
+
+			if err := tx.Create(&room).Error; err != nil {
+				return err
+			}
+
+			lastRoomID = &room.ID
+		}
+
+		return tx.Model(adventure).Update("CurrentRoomID", *lastRoomID).Error
+	})
+}
 func (r *gormAdventureRepo) Update(adventure *models.Adventure) error {
 	return r.DB.Save(adventure).Error
 }
