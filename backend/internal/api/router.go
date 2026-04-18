@@ -49,15 +49,19 @@ func SetupRouter(authH *handler.AuthHandler, adventureH *handler.AdventureHandle
 			adventures := protected.Group("/adventures")
 			{
 				// Zarządzanie cyklem życia przygody
-				adventures.POST("", adventureH.StartAdventure)           // Tworzy nową grę i generuje mapę
-				adventures.GET("/active", adventureH.GetActiveAdventure) // Pobiera statystyki trwającej gry
-				adventures.POST("/end", adventureH.EndUsersAdventure)    // Przerywa i usuwa obecną grę
+				adventures.POST("", adventureH.StartAdventure)
+				adventures.GET("/active", adventureH.GetActiveAdventure)
+				adventures.POST("/end", adventureH.EndUsersAdventure)
 
 				// Mechanika poruszania się po mapie
-				adventures.GET("/room", adventureH.GetCurrentRoom)  // Pobiera pełne dane o obecnym pokoju (np. statystyki wroga)
-				adventures.POST("/advance", adventureH.AdvanceRoom) // Przesuwa gracza do kolejnego pokoju (o ile obecny został oczyszczony)
-			}
+				adventures.GET("/room", adventureH.GetCurrentRoom)
+				adventures.POST("/advance", adventureH.AdvanceRoom)
+				adventures.POST("/play/:instanceID", adventureH.PlayCard)
 
+				// --- NOWY ENDPOINT ---
+				// Pobiera dynamiczny stan kart: Hand, Draw Pile, Discard Pile oraz HP/Manę
+				adventures.GET("/room/state", adventureH.GetFullBattleState)
+			}
 			// GRUPA: Karty (Zarządzanie ekwipunkiem i ekonomią poza walką)
 			cards := protected.Group("/cards")
 			{

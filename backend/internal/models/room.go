@@ -2,7 +2,7 @@ package models
 
 type Room struct {
 	ID          uint   `gorm:"primaryKey" json:"id"`
-	Type        string `json:"type"` // e.g., "fight", "event", "treasure"
+	Type        string `json:"type"` // e.g., "fight", "event"
 	AdventureID uint   `gorm:"not null;index" json:"adventureId"`
 	// Linking logic
 	NextRoomID *uint `json:"nextRoomId"`
