@@ -27,7 +27,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api/v1': {
-        target: 'http://backend:8080',
+        target: 'hackathon-e7kx.onrender.com',
         changeOrigin: true,
       },
     },
