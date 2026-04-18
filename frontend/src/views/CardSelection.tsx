@@ -182,52 +182,45 @@ export function CardSelection({
   );
 }
 
-interface AvailableCardItemProps {
-  card: Card;
-  isSelected: boolean;
-  isSelectable: boolean;
-  onSelect: () => void;
-  onDetails: () => void;
-}
-
 function AvailableCardItem({ 
   card, 
   isSelected, 
   isSelectable,
-  onSelect, 
-  onDetails 
+  onSelect 
 }: AvailableCardItemProps) {
   const { t } = useTranslation();
+  
   return (
-    <div
-      className={`p-4 rounded-xl transition-all duration-300 ${
+    <button
+      onClick={onSelect}
+      disabled={!isSelectable && !isSelected}
+      className={`w-full text-left p-4 rounded-xl transition-all duration-300 group ${
         isSelected
           ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border-2 border-cyan-400'
           : 'bg-slate-800/50 border-2 border-slate-700 hover:border-slate-600'
-      } ${!isSelectable && !isSelected ? 'opacity-50' : ''}`}
+      } ${!isSelectable && !isSelected ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
     >
       <div className="flex items-center justify-between">
-        <button
-          onClick={onDetails}
-          className="flex-1 text-left"
-        >
-          <div className="text-white font-bold text-lg hover:text-cyan-400 transition-colors">
+        <div className="flex-1">
+          <div className="text-white font-bold text-lg group-hover:text-cyan-400 transition-colors">
             {card.titleKey ? t(card.titleKey) : card.title}
           </div>
           <div className="text-slate-400 text-sm">
             {card.descriptionKey ? t(card.descriptionKey) : card.description}
           </div>
-          <div className="text-yellow-400 text-xs mt-1">{t('shop.level', { level: card.level })}</div>
-        </button>
-        <button
-          onClick={onSelect}
-          disabled={!isSelectable && !isSelected}
+          <div className="text-yellow-400 text-xs mt-1">
+            {t('shop.level', { level: card.level })}
+          </div>
+        </div>
+        
+        {/* Zamiast przycisku, dajemy div. Reaguje na hover całej grupy (group-hover) */}
+        <div
           className={`ml-3 p-2 rounded-lg transition-all ${
             isSelected
               ? 'bg-cyan-500 text-white'
               : isSelectable
-              ? 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-              : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+              ? 'bg-slate-700 text-slate-300 group-hover:bg-slate-600'
+              : 'bg-slate-800 text-slate-500'
           }`}
         >
           {isSelected ? (
@@ -235,45 +228,37 @@ function AvailableCardItem({
           ) : (
             <Plus className="w-5 h-5" />
           )}
-        </button>
+        </div>
       </div>
-    </div>
+    </button>
   );
 }
-
-interface SelectedCardItemProps {
-  card: Card;
-  onRemove: () => void;
-  onDetails: () => void;
-}
-
-function SelectedCardItem({ card, onRemove, onDetails }: SelectedCardItemProps) {
+function SelectedCardItem({ card, onRemove }: SelectedCardItemProps) {
   const { t } = useTranslation();
+  
   return (
-    <div className="p-4 rounded-xl bg-gradient-to-r from-green-500/20 to-cyan-500/20 border-2 border-green-500 hover:border-green-400 transition-all">
+    <button
+      onClick={onRemove}
+      className="w-full text-left p-4 rounded-xl bg-gradient-to-r from-green-500/20 to-cyan-500/20 border-2 border-green-500 hover:border-green-400 transition-all cursor-pointer group"
+    >
       <div className="flex items-center justify-between">
-        <button
-          onClick={onDetails}
-          className="flex-1 text-left"
-        >
-          <div className="text-white font-bold text-lg hover:text-green-300 transition-colors">
+        <div className="flex-1">
+          <div className="text-white font-bold text-lg group-hover:text-red-400 transition-colors">
             {card.titleKey ? t(card.titleKey) : card.title}
           </div>
           <div className="text-slate-300 text-sm">
             {card.descriptionKey ? t(card.descriptionKey) : card.description}
           </div>
-        </button>
-        <button
-          onClick={onRemove}
-          className="ml-3 p-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors"
-        >
+        </div>
+        
+        {/* Zamienione na div, zachowuje odpowiednie kolory */}
+        <div className="ml-3 p-2 rounded-lg bg-red-600 text-white group-hover:bg-red-700 transition-colors">
           <X className="w-5 h-5" />
-        </button>
+        </div>
       </div>
-    </div>
+    </button>
   );
 }
-
 interface CardDetailModalProps {
   card: Card;
   onClose: () => void;
