@@ -1,171 +1,191 @@
 import { useState, useEffect } from 'react';
-import type { AppView, DifficultyLevel, Card } from './types'; 
+import type { AppView, DifficultyLevel, Card } from './types';
 import { MainMenu } from './views/MainMenu';
 import { GameLevel } from './views/GameLevel';
 import { Tutorial } from './views/Tutorial';
 import { CardShop } from './views/CardShop';
 import { CardSelection } from './views/CardSelection';
 import { gameApi } from './api/gameApi';
+
+// NOWE IMPORTY DŹWIĘKU
+import { useAudioManager } from './hooks/useAudioManager';
+import { AudioControl } from './components/AudioControl';
+
 export const handleLogout = () => {
-  localStorage.removeItem('token');
-  window.location.reload(); 
+    localStorage.removeItem('token');
+    window.location.reload();
 };
+
 export default function App() {
-  const [gameState, setGameState] = useState<'menu' | 'game' | 'shop' | 'selection'>('menu');
-  const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('easy');
-  const [showTutorial, setShowTutorial] = useState(false);
-  const [tutorialStep, setTutorialStep] = useState(0);
-  const [hasSeenTutorial, setHasSeenTutorial] = useState(false);
-  const [playerXP, setPlayerXP] = useState(1);
-  const [userCards, setUserCards] = useState<Card[]>([]);
-  
-  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
+    const [gameState, setGameState] = useState<'menu' | 'game' | 'shop' | 'selection'>('menu');
+    const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('easy');
+    const [showTutorial, setShowTutorial] = useState(false);
+    const [tutorialStep, setTutorialStep] = useState(0);
+    const [hasSeenTutorial, setHasSeenTutorial] = useState(false);
+    const [playerXP, setPlayerXP] = useState(1);
+    const [userCards, setUserCards] = useState<Card[]>([]);
 
- useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('token');
-    if (token) {
-      localStorage.setItem('token', token);
-      setIsLoggedIn(true); // Aktualizujemy stan!
-      window.history.replaceState({}, document.title, "/");
-    }
-  const tokenFromUrl = params.get('token');
-  
-  // 1. Ustal finalny token (z URL lub z pamięci)
-  const activeToken = tokenFromUrl || localStorage.getItem('token');
-  if (tokenFromUrl) {
-    localStorage.setItem('token', tokenFromUrl);
-    window.history.replaceState({}, document.title, "/");
-  }
+    // NOWY STAN DŹWIĘKU (Domyślnie wyciszony)
+    const [isMuted, setIsMuted] = useState(true);
 
-  // 2. Jeśli mamy jakikolwiek token, pobierz dane
-  if (activeToken) {
-    gameApi.getUserCards()
-      .then(setUserCards)
-      .catch((err) => {
-        console.error("Sesja wygasła lub błąd sieci:", err);
-        // Opcjonalnie: jeśli błąd to 401, wyloguj
-        // localStorage.removeItem('token');
-      });
-  }
+    const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
 
-    const seen = localStorage.getItem('hasSeenTutorial');
-    if (seen === 'true') {
-      setHasSeenTutorial(true);
-    }
+    // MAPOWANIE STANÓW NA WIDOKI DLA AUDIO (Tłumaczenie Twojego gameState na AppView)
+    const audioViewMap: Record<string, AppView> = {
+        menu: 'MENU',
+        game: 'BATTLE',
+        shop: 'MENU', // Sklep może mieć muzykę menu
+        selection: 'DIFFICULTY'
+    };
 
-    // Pobierz karty użytkownika jeśli jest zalogowany
-    if (localStorage.getItem('token')) {
-        gameApi.getUserCards().then(setUserCards).catch(console.error);
-    }
-    if (activeToken) {
-        setIsLoggedIn(true);
-        
-        // POBIERZ AKTUALNE PIENIĄDZE (XP)
-        gameApi.getUserProfile()
-            .then(user => {
-                setPlayerXP(user.money); // GORM domyślnie daje dużą literę "Money" w JSON
-            })
-            .catch(err => {
-                console.error("Błąd ładowania profilu:", err);
-                if (err.message.includes('401')) handleLogout();
-            });
+    // AKTYWACJA AUDIO
+    useAudioManager(audioViewMap[gameState], isMuted);
 
-        gameApi.getUserCards().then(setUserCards).catch(console.error);
-    }
-  }, []);
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('token');
+        if (token) {
+            localStorage.setItem('token', token);
+            setIsLoggedIn(true);
+            window.history.replaceState({}, document.title, "/");
+        }
+        const tokenFromUrl = params.get('token');
 
-  const handleStartGame = (selectedDifficulty: 'easy' | 'medium' | 'hard') => {
-    const isLoggedIn = !!localStorage.getItem('token');
-    
-    if (!isLoggedIn) {
-      alert("Proszę zalogować się przez Google, aby rozpocząć przygodę!");
-      gameApi.loginWithGoogle();
-      return;
-    }
+        const activeToken = tokenFromUrl || localStorage.getItem('token');
+        if (tokenFromUrl) {
+            localStorage.setItem('token', tokenFromUrl);
+            window.history.replaceState({}, document.title, "/");
+        }
 
-    setDifficulty(selectedDifficulty);
+        if (activeToken) {
+            gameApi.getUserCards()
+                .then(setUserCards)
+                .catch((err) => {
+                    console.error("Sesja wygasła lub błąd sieci:", err);
+                });
+        }
 
-    if (!hasSeenTutorial) {
-      setShowTutorial(true);
-      setTutorialStep(0);
-    } else {
-      setGameState('selection');
-    }
-  };
+        const seen = localStorage.getItem('hasSeenTutorial');
+        if (seen === 'true') {
+            setHasSeenTutorial(true);
+        }
 
-  const handleTutorialNext = () => {
-    if (tutorialStep === 7) {
-      setShowTutorial(false);
-      setHasSeenTutorial(true);
-      localStorage.setItem('hasSeenTutorial', 'true');
-      setGameState('selection');
-    } else {
-      setTutorialStep(tutorialStep + 1);
-    }
-  };
+        if (localStorage.getItem('token')) {
+            gameApi.getUserCards().then(setUserCards).catch(console.error);
+        }
+        if (activeToken) {
+            setIsLoggedIn(true);
 
-  const handleTutorialClose = () => {
-    setShowTutorial(false);
-    setHasSeenTutorial(true);
-    localStorage.setItem('hasSeenTutorial', 'true');
-    setGameState('selection');
-  };
+            gameApi.getUserProfile()
+                .then(user => {
+                    setPlayerXP(user.money);
+                })
+                .catch(err => {
+                    console.error("Błąd ładowania profilu:", err);
+                    if (err.message.includes('401')) handleLogout();
+                });
 
-  const handleConfirmSelection = async (selectedCards: Card[]) => {
-    try {
-        const difficultyMap: Record<string, number> = { easy: 1, medium: 2, hard: 3 };
-        const cardIds = selectedCards.map(c => c.id);
-        await gameApi.startAdventure(difficultyMap[difficulty], cardIds, true);
-        setGameState('game');
-    } catch (err) {
-        alert("Błąd startu przygody: " + (err as Error).message);
-    }
-  };
+            gameApi.getUserCards().then(setUserCards).catch(console.error);
+        }
+    }, []);
 
-  return (
-    <div className="size-full">
-      {gameState === 'menu' && (
-        <MainMenu
-        isLoggedIn={isLoggedIn}
-          onStartGame={handleStartGame}
-          onOpenShop={() => setGameState('shop')}
-          playerXP={playerXP}
-        />
-      )}
-      {gameState === 'selection' && (
-        <CardSelection
-          onBack={() => setGameState('menu')}
-          onConfirm={handleConfirmSelection}
-          availableCards={userCards}
-          difficulty={difficulty}
-        />
-      )}
-      {gameState === 'game' && (
-        <GameLevel
-          onEndTurn={() => console.log('Turn ended')}
-          onBackToMenu={() => setGameState('menu')}
-          onShowTutorial={() => {
+    const handleStartGame = (selectedDifficulty: 'easy' | 'medium' | 'hard') => {
+        const isLoggedIn = !!localStorage.getItem('token');
+
+        if (!isLoggedIn) {
+            alert("Proszę zalogować się przez Google, aby rozpocząć przygodę!");
+            gameApi.loginWithGoogle();
+            return;
+        }
+
+        setDifficulty(selectedDifficulty);
+
+        if (!hasSeenTutorial) {
             setShowTutorial(true);
             setTutorialStep(0);
-          }}
-          difficulty={difficulty}
-        />
-      )}
-      {gameState === 'shop' && (
-        <CardShop
-          onBack={() => setGameState('menu')}
-          playerXP={playerXP}
-          onPurchase={(cost) => setPlayerXP(playerXP - cost)}
-        />
-      )}
-      {showTutorial && (
-        <Tutorial
-          currentStep={tutorialStep}
-          onNext={handleTutorialNext}
-          onClose={handleTutorialClose}
-        />
-      )}
-    </div>
-  );
+        } else {
+            setGameState('selection');
+        }
+    };
+
+    const handleTutorialNext = () => {
+        if (tutorialStep === 7) {
+            setShowTutorial(false);
+            setHasSeenTutorial(true);
+            localStorage.setItem('hasSeenTutorial', 'true');
+            setGameState('selection');
+        } else {
+            setTutorialStep(tutorialStep + 1);
+        }
+    };
+
+    const handleTutorialClose = () => {
+        setShowTutorial(false);
+        setHasSeenTutorial(true);
+        localStorage.setItem('hasSeenTutorial', 'true');
+        setGameState('selection');
+    };
+
+    const handleConfirmSelection = async (selectedCards: Card[]) => {
+        try {
+            const difficultyMap: Record<string, number> = { easy: 1, medium: 2, hard: 3 };
+            const cardIds = selectedCards.map(c => c.id);
+            await gameApi.startAdventure(difficultyMap[difficulty], cardIds, true);
+            setGameState('game');
+        } catch (err) {
+            alert("Błąd startu przygody: " + (err as Error).message);
+        }
+    };
+
+    return (
+        <div className="size-full">
+            {/* PRZYCISK MUTE/UNMUTE */}
+            <AudioControl
+                isMuted={isMuted}
+                onToggle={() => setIsMuted(!isMuted)}
+            />
+
+            {gameState === 'menu' && (
+                <MainMenu
+                    isLoggedIn={isLoggedIn}
+                    onStartGame={handleStartGame}
+                    onOpenShop={() => setGameState('shop')}
+                    playerXP={playerXP}
+                />
+            )}
+            {gameState === 'selection' && (
+                <CardSelection
+                    onBack={() => setGameState('menu')}
+                    onConfirm={handleConfirmSelection}
+                    availableCards={userCards}
+                    difficulty={difficulty}
+                />
+            )}
+            {gameState === 'game' && (
+                <GameLevel
+                    onEndTurn={() => console.log('Turn ended')}
+                    onBackToMenu={() => setGameState('menu')}
+                    onShowTutorial={() => {
+                        setShowTutorial(true);
+                        setTutorialStep(0);
+                    }}
+                    difficulty={difficulty}
+                />
+            )}
+            {gameState === 'shop' && (
+                <CardShop
+                    onBack={() => setGameState('menu')}
+                    playerXP={playerXP}
+                    onPurchase={(cost) => setPlayerXP(playerXP - cost)}
+                />
+            )}
+            {showTutorial && (
+                <Tutorial
+                    currentStep={tutorialStep}
+                    onNext={handleTutorialNext}
+                    onClose={handleTutorialClose}
+                />
+            )}
+        </div>
+    );
 }
