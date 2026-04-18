@@ -1,30 +1,31 @@
 version: '3.8'
 
 services:
-  # Twój zaktualizowany Frontend
   frontend:
-    build: ./frontend  # Zmieniliśmy ścieżkę na folder frontend
+    build: ./frontend
     ports:
       - "5173:5173"
     volumes:
-      - ./frontend:/app # Zmieniliśmy mapowanie
+      - ./frontend:/app
       - /app/node_modules
     environment:
       - CHOKIDAR_USEPOLLING=true
     depends_on:
-      - backend # Frontend uruchomi się dopiero, gdy wstanie backend
+      - backend
 
-  # Serwer Go Twojego kolegi
   backend:
     build: ./backend
     ports:
-      - "8080:8080" # Tu wpiszcie port, na którym nasłuchuje aplikacja w Go
-    # Jeśli backend z Go potrzebuje zmiennych środowiskowych do bazy, wrzućcie je tutaj:
-    # environment:
-    #   - DB_HOST=db
-    #   - DB_USER=admin
+      - "8080:8080"
+    environment:
+      - GOOGLE_CLIENT_ID=TUTAJ_TWOJE_ID.apps.googleusercontent.com
+      - GOOGLE_CLIENT_SECRET=TUTAJ_TWÓJ_SEKRET
+      - GOOGLE_REDIRECT_URL=https://hackathon-e7kx.onrender.com/api/v1/auth/google/callback
+      - DB_URL=host=db user=admin password=secretpassword dbname=roguelike port=5432 sslmode=disable
+      - FRONTEND_URL=http://localhost:5173
+    depends_on:
+      - db
 
-  # Baza danych (jeśli kolega używa tej samej z PostgreSQL, którą postawiliśmy wcześniej)
   db:
     image: postgres:15-alpine
     restart: always
