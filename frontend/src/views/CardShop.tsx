@@ -1,5 +1,5 @@
-import { ArrowLeft, Lock, TrendingUp } from 'lucide-react';
-import { useState } from 'react';
+import { ArrowLeft, Lock, TrendingUp, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { gameApi } from '../api/gameApi';
 
@@ -24,16 +24,48 @@ interface CardShopProps {
 export function CardShop({ onBack, playerXP, onPurchase }: CardShopProps) {
   const { t } = useTranslation();
   const [selectedCard, setSelectedCard] = useState<number | null>(null);
+  
+  // Dynamic state replacing the hardcoded arrays
+  const [allCards, setAllCards] = useState<Card[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch data from backend and merge catalog with user's inventory
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [catalog, userInventory] = await Promise.all([
+        gameApi.getAllCards(),
+        gameApi.getUserCards()
+      ]);
+
+      const mergedCards = catalog.map(baseCard => {
+        const ownedInstance = userInventory.find(u => u.id === baseCard.id);
+        return ownedInstance 
+          ? { ...baseCard, ...ownedInstance, owned: true } 
+          : { ...baseCard, owned: false };
+      });
+
+      setAllCards(mergedCards);
+    } catch (error) {
+      console.error("Failed to sync cards:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial load
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const handleUpgrade = async (card: Card) => {
     if (card.upgradeCost && playerXP >= card.upgradeCost) {
       try {
         await gameApi.upgradeCard(card.id);
         onPurchase(card.upgradeCost);
+        await loadData(); // Refresh list to get new stats
       } catch (err) {
-        // Fallback dla celów deweloperskich, jeśli backend jeszcze nie zwraca 200 OK
-        console.warn("Backend upgrade nieobsłużony, wykonuję lokalnie:", err);
-        onPurchase(card.upgradeCost);
+        console.warn("Backend upgrade failed:", err);
       }
     }
   };
@@ -43,95 +75,12 @@ export function CardShop({ onBack, playerXP, onPurchase }: CardShopProps) {
       try {
         await gameApi.buyCard(card.id);
         onPurchase(card.unlockCost);
+        await loadData(); // Refresh list so card moves to "Owned"
       } catch (err) {
-        console.warn("Backend unlock nieobsłużony, wykonuję lokalnie:", err);
-        onPurchase(card.unlockCost);
+        console.warn("Backend unlock failed:", err);
       }
     }
   };
-
-  const allCards: Card[] = [
-    {
-      id: 1,
-      type: 'block',
-      titleKey: 'cards.blockSender.title',
-      descriptionKey: 'cards.blockSender.description',
-      color: 'from-red-500 to-red-600',
-      owned: true,
-      level: 1,
-      upgradeCost: 50
-    },
-    {
-      id: 2,
-      type: 'report',
-      titleKey: 'cards.reportScam.title',
-      descriptionKey: 'cards.reportScam.description',
-      color: 'from-orange-500 to-orange-600',
-      owned: true,
-      level: 1,
-      upgradeCost: 50
-    },
-    {
-      id: 3,
-      type: 'verify',
-      titleKey: 'cards.verifySource.title',
-      descriptionKey: 'cards.verifySource.description',
-      color: 'from-blue-500 to-blue-600',
-      owned: true,
-      level: 1,
-      upgradeCost: 50
-    },
-    {
-      id: 4,
-      type: 'ignore',
-      titleKey: 'cards.deleteIgnore.title',
-      descriptionKey: 'cards.deleteIgnore.description',
-      color: 'from-gray-500 to-gray-600',
-      owned: true,
-      level: 1,
-      upgradeCost: 50
-    },
-    {
-      id: 5,
-      type: 'block',
-      titleKey: 'cards.twoFAShield.title',
-      descriptionKey: 'cards.twoFAShield.description',
-      color: 'from-green-500 to-green-600',
-      owned: true,
-      level: 1,
-      upgradeCost: 50
-    },
-    {
-      id: 6,
-      type: 'power',
-      titleKey: 'cards.strongPassword.title',
-      descriptionKey: 'cards.strongPassword.description',
-      color: 'from-purple-500 to-purple-600',
-      owned: false,
-      level: 0,
-      unlockCost: 100
-    },
-    {
-      id: 7,
-      type: 'defense',
-      titleKey: 'cards.vpnShield.title',
-      descriptionKey: 'cards.vpnShield.description',
-      color: 'from-indigo-500 to-indigo-600',
-      owned: false,
-      level: 0,
-      unlockCost: 150
-    },
-    {
-      id: 8,
-      type: 'attack',
-      titleKey: 'cards.evidenceCollect.title',
-      descriptionKey: 'cards.evidenceCollect.description',
-      color: 'from-pink-500 to-pink-600',
-      owned: false,
-      level: 0,
-      unlockCost: 120
-    }
-  ];
 
   const ownedCards = allCards.filter(c => c.owned);
   const lockedCards = allCards.filter(c => !c.owned);
@@ -164,47 +113,59 @@ export function CardShop({ onBack, playerXP, onPurchase }: CardShopProps) {
         </div>
       </div>
 
-      <div className="relative z-10 flex h-[calc(100%-88px)]">
-        {/* Left side - Owned cards */}
-        <div className="w-1/2 p-6 border-r border-slate-700 overflow-y-auto">
-          <h2 className="text-2xl font-bold text-white mb-4">{t('shop.yourCards')}</h2>
-          <div className="space-y-3">
-            {ownedCards.map(card => (
-              <CardListItem
-                key={card.id}
-                card={card}
-                selected={selectedCard === card.id}
-                onSelect={() => setSelectedCard(card.id)}
+      {loading ? (
+        <div className="relative z-10 flex h-[calc(100%-88px)] items-center justify-center">
+           <Loader2 className="w-12 h-12 text-cyan-500 animate-spin" />
+        </div>
+      ) : (
+        <div className="relative z-10 flex h-[calc(100%-88px)]">
+          {/* Left side - Owned cards */}
+          <div className="w-1/2 p-6 border-r border-slate-700 overflow-y-auto">
+            <h2 className="text-2xl font-bold text-white mb-4">{t('shop.yourCards')}</h2>
+            <div className="space-y-3">
+              {ownedCards.map(card => (
+                <CardListItem
+                  key={card.id}
+                  card={card}
+                  selected={selectedCard === card.id}
+                  onSelect={() => setSelectedCard(card.id)}
+                />
+              ))}
+              {ownedCards.length === 0 && (
+                <div className="text-slate-400 p-4">{t('shop.noCardsOwned', 'Brak posiadanych kart.')}</div>
+              )}
+            </div>
+          </div>
+
+          {/* Right side - Detail panel or locked cards */}
+          <div className="w-1/2 p-6 overflow-y-auto">
+            {selected ? (
+              <CardDetailPanel
+                card={selected}
+                playerXP={playerXP}
+                onUpgrade={() => handleUpgrade(selected)}
+                onUnlock={() => handleUnlock(selected)}
               />
-            ))}
+            ) : (
+              <>
+                <h2 className="text-2xl font-bold text-white mb-4">{t('shop.unlockNewCards')}</h2>
+                <div className="grid grid-cols-2 gap-4">
+                  {lockedCards.map(card => (
+                    <LockedCardPreview
+                      key={card.id}
+                      card={card}
+                      onSelect={() => setSelectedCard(card.id)}
+                    />
+                  ))}
+                  {lockedCards.length === 0 && (
+                     <div className="text-slate-400 col-span-2 p-4">{t('shop.allCardsUnlocked', 'Wszystkie karty zostały odblokowane!')}</div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
-
-        {/* Right side - Detail panel or locked cards */}
-        <div className="w-1/2 p-6 overflow-y-auto">
-          {selected ? (
-            <CardDetailPanel
-              card={selected}
-              playerXP={playerXP}
-              onUpgrade={() => handleUpgrade(selected)}
-              onUnlock={() => handleUnlock(selected)}
-            />
-          ) : (
-            <>
-              <h2 className="text-2xl font-bold text-white mb-4">{t('shop.unlockNewCards')}</h2>
-              <div className="grid grid-cols-2 gap-4">
-                {lockedCards.map(card => (
-                  <LockedCardPreview
-                    key={card.id}
-                    card={card}
-                    onSelect={() => setSelectedCard(card.id)}
-                  />
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-      </div>
+      )}
     </div>
   );
 }
