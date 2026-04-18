@@ -2,12 +2,15 @@ import { ArrowLeft, Lock, TrendingUp, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { gameApi } from '../api/gameApi';
+import { parseBackendTranslation } from '../utils/translationHelper'; // <-- Import funkcji
 
 interface Card {
   id: number;
   type: string;
-  titleKey: string;
-  descriptionKey: string;
+  title?: string;          // <-- Dodane pole z backendu
+  titleKey?: string;       // <-- Opcjonalny fallback
+  description?: string;    // <-- Dodane pole z backendu
+  descriptionKey?: string; // <-- Opcjonalny fallback
   color: string;
   owned: boolean;
   level: number;
@@ -189,11 +192,17 @@ function CardListItem({ card, selected, onSelect }: CardListItemProps) {
     >
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-white font-bold text-lg">{t(card.titleKey)}</div>
-          <div className="text-slate-400 text-sm">{t(card.descriptionKey)}</div>
+          {/* Przetwarzanie tytułu */}
+          <div className="text-white font-bold text-lg">
+            {parseBackendTranslation(card.title) || (card.titleKey ? t(card.titleKey) : '')}
+          </div>
+          {/* Przetwarzanie opisu */}
+          <div className="text-slate-400 text-sm">
+            {parseBackendTranslation(card.description) || (card.descriptionKey ? t(card.descriptionKey) : '')}
+          </div>
           <div className="text-yellow-400 text-xs mt-1">{t('shop.level', { level: card.level })}</div>
         </div>
-        <div className={`w-12 h-16 rounded-lg bg-gradient-to-br ${card.color}`} />
+        <div className={`w-12 h-16 rounded-lg bg-gradient-to-br ${card.color || 'from-slate-500 to-slate-600'}`} />
       </div>
     </button>
   );
@@ -215,9 +224,12 @@ function LockedCardPreview({ card, onSelect }: LockedCardPreviewProps) {
         <Lock className="w-12 h-12 text-yellow-500" />
       </div>
       <div className="relative z-10 opacity-40">
-        <div className={`w-full h-32 rounded-lg bg-gradient-to-br ${card.color} mb-3`} />
-        <div className="text-white font-bold">{t(card.titleKey)}</div>
-        <div className="text-yellow-500 text-sm mt-2">{card.unlockCost} XP</div>
+        <div className={`w-full h-32 rounded-lg bg-gradient-to-br ${card.color || 'from-slate-500 to-slate-600'} mb-3`} />
+        {/* Przetwarzanie tytułu */}
+        <div className="text-white font-bold text-center">
+          {parseBackendTranslation(card.title) || (card.titleKey ? t(card.titleKey) : '')}
+        </div>
+        <div className="text-yellow-500 text-center font-bold text-sm mt-2">{card.unlockCost} XP</div>
       </div>
     </button>
   );
@@ -234,10 +246,13 @@ function CardDetailPanel({ card, playerXP, onUpgrade, onUnlock }: CardDetailPane
   const { t } = useTranslation();
   return (
     <div className="bg-slate-800/50 rounded-2xl p-8 border-2 border-cyan-400">
-      <div className={`w-full h-64 rounded-2xl bg-gradient-to-br ${card.color} mb-6 flex items-center justify-center`}>
+      <div className={`w-full h-64 rounded-2xl bg-gradient-to-br ${card.color || 'from-slate-500 to-slate-600'} mb-6 flex items-center justify-center`}>
         <div className="text-center text-white">
           <div className="text-6xl mb-4">📱</div>
-          <div className="text-3xl font-bold">{t(card.titleKey)}</div>
+          {/* Przetwarzanie tytułu */}
+          <div className="text-3xl font-bold">
+            {parseBackendTranslation(card.title) || (card.titleKey ? t(card.titleKey) : '')}
+          </div>
         </div>
       </div>
 
@@ -249,7 +264,10 @@ function CardDetailPanel({ card, playerXP, onUpgrade, onUnlock }: CardDetailPane
 
         <div>
           <div className="text-slate-400 text-sm">{t('shop.description')}</div>
-          <div className="text-white text-lg">{t(card.descriptionKey)}</div>
+          {/* Przetwarzanie opisu */}
+          <div className="text-white text-lg">
+            {parseBackendTranslation(card.description) || (card.descriptionKey ? t(card.descriptionKey) : '')}
+          </div>
         </div>
 
         {card.owned ? (
