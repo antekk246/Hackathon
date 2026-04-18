@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type UserRepository interface {
@@ -43,42 +44,26 @@ func (r *gormUserRepo) BuyCard(userID uint, cardID uint) error {
 		var user models.User
 		var card models.Card
 
-		// 1. Fetch user and card with a lock to prevent race conditions
-		if err := tx.Set("gorm:query_option", "FOR UPDATE").First(&user, userID).Error; err != nil {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&user, userID).Error; err != nil {
 			return err
 		}
-
-		// We assume the card price is stored in the Card model (e.g., as 'BuyPrice' or 'UpgradeCost')
-		// For this example, let's assume cards have a 'Price' field.
 		if err := tx.First(&card, cardID).Error; err != nil {
 			return err
 		}
 
-		// 2. Check if user already owns the card (optional, if you want unique cards only)
-		var count int64
-		tx.Table("user_cards").Where("user_id = ? AND card_id = ?", userID, cardID).Count(&count)
-		if count > 0 {
-			return fmt.Errorf("you already own the %s card", card.Name)
+		if user.Money < card.UpgradeCost { // Or card.Price
+			return fmt.Errorf("insufficient funds")
 		}
 
-		// 3. Check funds (using UpgradeCost as the base price, or add a Price field to Card)
-		// Adjust "UpgradeCost" to whatever field represents the store price
-		price := card.UpgradeCost
-		if user.Money < price {
-			return fmt.Errorf("insufficient money: need %d, have %d", price, user.Money)
-		}
+		// 1. Deduct Money
+		tx.Model(&user).Update("money", user.Money-card.UpgradeCost)
 
-		// 4. Deduct Money
-		if err := tx.Model(&user).Update("money", user.Money-price).Error; err != nil {
-			return err
+		// 2. Add a NEW instance to the inventory
+		userCard := models.UserCard{
+			UserID: userID,
+			CardID: cardID,
 		}
-
-		// 5. Add Card to User
-		if err := tx.Exec("INSERT INTO user_cards (user_id, card_id) VALUES (?, ?)", userID, cardID).Error; err != nil {
-			return err
-		}
-
-		return nil
+		return tx.Create(&userCard).Error
 	})
 }
 func (r *gormUserRepo) Create(user *models.User) error {

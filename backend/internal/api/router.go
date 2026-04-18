@@ -62,9 +62,9 @@ func SetupRouter(authH *handler.AuthHandler, adventureH *handler.AdventureHandle
 				cards.GET("/user", cardH.GetUserCards)               // Pobiera prywatną kolekcję kart zalogowanego gracza
 				cards.GET("/adventure/:id", cardH.GetAdventureCards) // Pobiera tylko te karty, które gracz zabrał na daną przygodę
 
-				// Akcje na konkretnych kartach (wymagają podania ID karty w adresie URL)
-				cards.POST("/:id/upgrade", cardH.Upgrade) // Ulepsza posiadaną kartę (np. za wirtualne złoto)
-				cards.POST("/:id/buy", cardH.BuyCard)     // Kupuje nową kartę i dodaje ją do kolekcji gracza
+				// id to numer instancj
+				cards.POST("/:id/upgrade", cardH.Upgrade)
+				cards.POST("/:id/buy", cardH.BuyCard) // Kupuje nową kartę i dodaje ją do kolekcji gracza
 			}
 		}
 	}

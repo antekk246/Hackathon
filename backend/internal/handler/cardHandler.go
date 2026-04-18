@@ -81,26 +81,27 @@ func (h *CardHandler) GetAdventureCards(c *gin.Context) {
 
 	c.JSON(http.StatusOK, cards)
 }
-
 func (h *CardHandler) Upgrade(c *gin.Context) {
-	// Parse Card ID from URL: /cards/:id/upgrade
-	cardID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	// This ID is now the primary key from the 'user_cards' table
+	instanceID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid card ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid instance ID"})
 		return
 	}
 
-	// Identify user (assuming middleware sets "userID")
 	userID := c.MustGet("userID").(uint)
 
-	// Call repository/service logic
-	if err := h.CardRepo.UpgradeCardForUser(userID, uint(cardID)); err != nil {
-		// Return the specific error message (e.g., "insufficient funds")
-		c.JSON(http.StatusPaymentRequired, gin.H{"error": err.Error()})
+	// Call the updated repository method
+	if err := h.CardRepo.UpgradeCardInstance(userID, uint(instanceID)); err != nil {
+		// We use 402 Payment Required for funds, or 400 for logic errors
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Card upgraded successfully"})
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "success",
+		"message": "Specific card instance upgraded successfully",
+	})
 }
 
 // BuyCard - POST /api/v1/cards/:id/buy

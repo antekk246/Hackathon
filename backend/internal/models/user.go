@@ -14,7 +14,17 @@ type User struct {
 
 	Money uint `gorm:"not null" json:"money"`
 
-	Cards []Card `gorm:"many2many:user_cards;" json:"cards"`
-
+	Cards     []UserCard `gorm:"foreignKey:UserID" json:"inventory"`
 	Adventure *Adventure `json:"adventure,omitempty"`
+}
+
+type UserCard struct {
+	ID     uint `gorm:"primaryKey" json:"instanceId"`
+	UserID uint `gorm:"index" json:"userId"`
+	CardID uint `gorm:"index" json:"cardId"`
+	Card   Card `gorm:"foreignKey:CardID" json:"card"`
+}
+
+func (UserCard) TableName() string {
+	return "user_cards"
 }

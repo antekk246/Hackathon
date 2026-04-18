@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"backend/internal/api"
+	"backend/internal/database"
 	"backend/internal/domain"
 	"backend/internal/handler"
 	"backend/internal/models"
@@ -40,18 +41,32 @@ func main() {
 		sqlDB.SetMaxOpenConns(100)
 		sqlDB.SetConnMaxLifetime(time.Hour)
 	}
-
-	log.Println("Connected to PostgreSQL successfully!")
-
 	err = db.AutoMigrate(
-		&models.CardType{},
-		&models.Card{},
-		&models.User{},
+		&models.CardType{}, // Migrate types first
+		&models.Card{},     // Then base cards
+		&models.User{},     // Then users
+		&models.UserCard{}, // FINALLY the link table
+		&models.Enemy{},
+		&models.Reward{},
 		&models.Adventure{},
+		&models.Room{},
+		&models.Fight{},
+		&models.Event{},
 		&models.Buff{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
+	}
+	var count int64
+	db.Model(&models.CardType{}).Count(&count)
+
+	if count == 0 {
+		log.Println("Baza danych jest pusta. Rozpoczynam automatyczne seedowanie...")
+		if err := database.Seed(db); err != nil {
+			log.Printf("Błąd podczas seedowania: %v", err)
+		}
+	} else {
+		log.Println("Dane już istnieją w bazie, pomijam seedowanie.")
 	}
 
 	oauthConf := &oauth2.Config{

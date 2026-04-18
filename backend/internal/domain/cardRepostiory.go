@@ -5,7 +5,6 @@ import (
 	"errors"
 
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 type CardRepository interface {
@@ -13,7 +12,7 @@ type CardRepository interface {
 	GetByID(id uint) (*models.Card, error)
 	GetByUserID(userID uint) ([]models.Card, error)
 	GetByAdventureID(adventureID uint, userID uint) ([]models.Card, error)
-	UpgradeCardForUser(userID uint, cardID uint) error
+	UpgradeCardInstance(userID uint, instanceID uint) error
 	VerifyUserOwnsCards(userID uint, cardIDs []uint) error
 }
 
@@ -64,52 +63,33 @@ func (r *gormCardRepo) GetByAdventureID(adventureID uint, userID uint) ([]models
 
 	return cards, err
 }
-func (r *gormCardRepo) UpgradeCardForUser(userID uint, cardID uint) error {
+
+// Change the signature to use instanceID (UserCard.ID)
+func (r *gormCardRepo) UpgradeCardInstance(userID uint, instanceID uint) error {
 	return r.DB.Transaction(func(tx *gorm.DB) error {
+		var userCard models.UserCard
+
+		// 1. Find the specific card copy owned by the user
+		if err := tx.Preload("Card.UpgradeTo").Where("id = ? AND user_id = ?", instanceID, userID).First(&userCard).Error; err != nil {
+			return errors.New("card instance not found")
+		}
+
+		if userCard.Card.UpgradeToID == nil {
+			return errors.New("this card is already max level")
+		}
+
+		// 2. Check User Money
 		var user models.User
-		var card models.Card
-
-		// 1. Fetch user and card with locking to prevent race conditions
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&user, userID).Error; err != nil {
-			return err
-		}
-		if err := tx.Preload("UpgradeTo").First(&card, cardID).Error; err != nil {
-			return err
+		tx.First(&user, userID)
+		if user.Money < userCard.Card.UpgradeCost {
+			return errors.New("poor gamer alert: insufficient funds")
 		}
 
-		// 2. Validate: Does the card have an upgrade?
-		if card.UpgradeToID == nil {
-			return errors.New("this card cannot be upgraded")
-		}
+		// 3. Process Upgrade
+		tx.Model(&user).Update("money", user.Money-userCard.Card.UpgradeCost)
 
-		// 3. Validate: Does the user own the card?
-		var count int64
-		tx.Table("user_cards").Where("user_id = ? AND card_id = ?", userID, cardID).Count(&count)
-		if count == 0 {
-			return errors.New("user does not own this card")
-		}
-
-		// 4. Validate: Does user have enough money?
-		if user.Money < card.UpgradeCost {
-			return errors.New("insufficient funds")
-		}
-
-		// 5. Deduct Money
-		if err := tx.Model(&user).Update("money", user.Money-card.UpgradeCost).Error; err != nil {
-			return err
-		}
-
-		// 6. Swap the cards in the join table
-		// Remove old card
-		if err := tx.Exec("DELETE FROM user_cards WHERE user_id = ? AND card_id = ?", userID, cardID).Error; err != nil {
-			return err
-		}
-		// Add new card
-		if err := tx.Exec("INSERT INTO user_cards (user_id, card_id) VALUES (?, ?)", userID, *card.UpgradeToID).Error; err != nil {
-			return err
-		}
-
-		return nil
+		// Just update the CardID on this specific instance row!
+		return tx.Model(&userCard).Update("card_id", *userCard.Card.UpgradeToID).Error
 	})
 }
 func (r *gormCardRepo) VerifyUserOwnsCards(userID uint, cardIDs []uint) error {
