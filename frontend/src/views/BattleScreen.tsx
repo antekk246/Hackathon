@@ -11,60 +11,7 @@ export function BattleScreen({ onBackToMenu }: BattleScreenProps) {
   const [enemyHealth, setEnemyHealth] = useState(60);
   const [energy, setEnergy] = useState(3);
   const [selectedCard, setSelectedCard] = useState<number | null>(null);
-
   const cards = [
-    {
-      id: 1,
-      type: 'Block',
-      title: 'Verify Sender',
-      description: 'Check email address',
-      cost: 1,
-      effect: '+8 Defense',
-      color: 'from-blue-600 to-blue-700',
-      icon: '🔍'
-    },
-    {
-      id: 2,
-      type: 'Attack',
-      title: 'Report Scam',
-      description: 'Flag suspicious message',
-      cost: 1,
-      effect: '12 Damage',
-      color: 'from-red-600 to-red-700',
-      icon: '🚨'
-    },
-    {
-      id: 3,
-      type: 'Skill',
-      title: '2FA Shield',
-      description: 'Enable two-factor auth',
-      cost: 2,
-      effect: '+15 Defense',
-      color: 'from-green-600 to-green-700',
-      icon: '🔐'
-    },
-    {
-      id: 4,
-      type: 'Attack',
-      title: 'Block Contact',
-      description: 'Cut off scammer',
-      cost: 2,
-      effect: '18 Damage',
-      color: 'from-orange-600 to-orange-700',
-      icon: '🚫'
-    },
-    {
-      id: 5,
-      type: 'Skill',
-      title: 'Educate',
-      description: 'Share scam awareness',
-      cost: 1,
-      effect: 'Draw 2 cards',
-      color: 'from-purple-600 to-purple-700',
-      icon: '📚'
-    }
-  ];
-
   return (
     <div className="size-full bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex flex-col relative overflow-hidden">
       {/* Cyber grid background */}
