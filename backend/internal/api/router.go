@@ -43,6 +43,8 @@ func SetupRouter(authH *handler.AuthHandler, advH *handler.AdventureHandler) *gi
 		{
 			protected.GET("/", someFunc)
 			protected.POST("/adventures", advH.StartAdventure)
+			protected.GET("/adventures/active", advH.GetActiveAdventure)
+			protected.DELETE("/adventures/:id", advH.EndAdventure)
 		}
 	}
 

@@ -12,6 +12,8 @@ type User struct {
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
 
+	Money uint `gorm:"not null" json:"money"`
+
 	Cards []Card `gorm:"many2many:user_cards;" json:"cards"`
 
 	Adventure *Adventure `json:"adventure,omitempty"`

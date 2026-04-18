@@ -10,6 +10,7 @@ type Card struct {
 	Description string         `gorm:"not null" json:"description"`
 	UpgradeToID *uint          `json:"upgradeToId"`
 	UpgradeTo   *Card          `gorm:"foreignKey:UpgradeToID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"upgradeTo,omitempty"`
+	UpgradeCost uint           `json:"upgradeCost"`
 	CardAction  datatypes.JSON `json:"cardAction"`
 	Adventures  []Adventure    `gorm:"many2many:adventure_cards;" json:"adventures,omitempty"`
 }
