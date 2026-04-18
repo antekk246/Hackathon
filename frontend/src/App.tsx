@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { AppView, DifficultyLevel } from './types'; // types są w src/types
 import { MainMenu } from './views/MainMenu';
+import { GameLevel } from './views/GameLevel';
 import { BattleScreen } from './views/BattleScreen';
 import { Tutorial } from './views/Tutorial';
 import { CardShop } from './views/CardShop';
@@ -58,8 +59,10 @@ export default function App() {
         />
       )}
       {gameState === 'game' && (
-        <BattleScreen
+        <GameLevel
+          onEndTurn={() => console.log('Turn ended')}
           onBackToMenu={() => setGameState('menu')}
+          difficulty={difficulty}
         />
       )}
       {gameState === 'shop' && (
