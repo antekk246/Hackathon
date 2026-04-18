@@ -5,10 +5,12 @@ import (
 	"backend/internal/models"
 	"backend/pkg/jwtutil"
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/oauth2"
+	"gorm.io/gorm"
 )
 
 type AuthHandler struct {
@@ -57,15 +59,13 @@ func (h *AuthHandler) GoogleCallback(c *gin.Context) {
 
 	user, err := h.UserRepo.GetByOAuthID(googleUser.Sub)
 	if err != nil {
-		// Zakładamy, że błąd oznacza brak usera (RecordNotFound)
-		user = &models.User{
-			Email:    googleUser.Email,
-			OAuthID:  googleUser.Sub,
-			Username: googleUser.Name,
-		}
-
-		if err := h.UserRepo.Create(user); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// Only create if they actually don't exist
+			user = &models.User{ /* ... */ }
+			h.UserRepo.Create(user)
+		} else {
+			// If it's a real DB error (like connection lost), don't try to create a user
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 			return
 		}
 	}
