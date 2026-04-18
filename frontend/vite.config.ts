@@ -1,24 +1,36 @@
 import { defineConfig } from 'vite'
+import path from 'path'
+import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 
-// https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    watch: {
-      usePolling: true,
-    },
-    host: true,
-    strictPort: true,
-    port: 5173,
-    // DODAJEMY PROXY:
-    proxy: {
-      '/api': {
-        // 'backend' to nazwa serwisu z pliku docker-compose.yml!
-        target: 'http://backend:8080', 
-        changeOrigin: true,
-        secure: false,
+
+function figmaAssetResolver() {
+  return {
+    name: 'figma-asset-resolver',
+    resolveId(id) {
+      if (id.startsWith('figma:asset/')) {
+        const filename = id.replace('figma:asset/', '')
+        return path.resolve(__dirname, 'src/assets', filename)
       }
-    }
+    },
   }
+}
+
+export default defineConfig({
+  plugins: [
+    figmaAssetResolver(),
+    // The React and Tailwind plugins are both required for Make, even if
+    // Tailwind is not being actively used – do not remove them
+    react(),
+    tailwindcss(),
+  ],
+  resolve: {
+    alias: {
+      // Alias @ to the src directory
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+
+  // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
+  assetsInclude: ['**/*.svg', '**/*.csv'],
 })
