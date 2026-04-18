@@ -24,7 +24,7 @@ func HealthCheck(c *gin.Context) {
 	})
 }
 
-func SetupRouter(authH *handler.AuthHandler) *gin.Engine {
+func SetupRouter(authH *handler.AuthHandler, advH *handler.AdventureHandler) *gin.Engine {
 	r := gin.Default()
 	r.GET("/ping", HealthCheck)
 	v1 := r.Group("/api/v1")
@@ -42,6 +42,7 @@ func SetupRouter(authH *handler.AuthHandler) *gin.Engine {
 		protected.Use(middleware.JWTAuth())
 		{
 			protected.GET("/", someFunc)
+			protected.POST("/adventures", advH.StartAdventure)
 		}
 	}
 
