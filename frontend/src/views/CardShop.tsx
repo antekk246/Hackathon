@@ -2,15 +2,16 @@ import { ArrowLeft, Lock, TrendingUp, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { gameApi } from '../api/gameApi';
-import { parseBackendTranslation } from '../utils/translationHelper'; // <-- Import funkcji
+import { parseBackendTranslation } from '../utils/translationHelper';
 
 interface Card {
   id: number;
-  type: string;
-  title?: string;          // <-- Dodane pole z backendu
-  titleKey?: string;       // <-- Opcjonalny fallback
-  description?: string;    // <-- Dodane pole z backendu
-  descriptionKey?: string; // <-- Opcjonalny fallback
+  // Poprawka: uwzględnienie, że type może przyjść z backendu jako obiekt
+  type: string | { id: number; name: string; [key: string]: any }; 
+  title?: string;
+  titleKey?: string;
+  description?: string;
+  descriptionKey?: string;
   color: string;
   owned: boolean;
   level: number;
@@ -28,11 +29,9 @@ export function CardShop({ onBack, playerXP, onPurchase }: CardShopProps) {
   const { t } = useTranslation();
   const [selectedCard, setSelectedCard] = useState<number | null>(null);
   
-  // Dynamic state replacing the hardcoded arrays
   const [allCards, setAllCards] = useState<Card[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch data from backend and merge catalog with user's inventory
   const loadData = async () => {
     try {
       setLoading(true);
@@ -56,7 +55,6 @@ export function CardShop({ onBack, playerXP, onPurchase }: CardShopProps) {
     }
   };
 
-  // Initial load
   useEffect(() => {
     loadData();
   }, []);
@@ -66,7 +64,7 @@ export function CardShop({ onBack, playerXP, onPurchase }: CardShopProps) {
       try {
         await gameApi.upgradeCard(card.id);
         onPurchase(card.upgradeCost);
-        await loadData(); // Refresh list to get new stats
+        await loadData();
       } catch (err) {
         console.warn("Backend upgrade failed:", err);
       }
@@ -78,7 +76,7 @@ export function CardShop({ onBack, playerXP, onPurchase }: CardShopProps) {
       try {
         await gameApi.buyCard(card.id);
         onPurchase(card.unlockCost);
-        await loadData(); // Refresh list so card moves to "Owned"
+        await loadData();
       } catch (err) {
         console.warn("Backend unlock failed:", err);
       }
@@ -192,11 +190,9 @@ function CardListItem({ card, selected, onSelect }: CardListItemProps) {
     >
       <div className="flex items-center justify-between">
         <div>
-          {/* Przetwarzanie tytułu */}
           <div className="text-white font-bold text-lg">
             {parseBackendTranslation(card.title) || (card.titleKey ? t(card.titleKey) : '')}
           </div>
-          {/* Przetwarzanie opisu */}
           <div className="text-slate-400 text-sm">
             {parseBackendTranslation(card.description) || (card.descriptionKey ? t(card.descriptionKey) : '')}
           </div>
@@ -225,7 +221,6 @@ function LockedCardPreview({ card, onSelect }: LockedCardPreviewProps) {
       </div>
       <div className="relative z-10 opacity-40">
         <div className={`w-full h-32 rounded-lg bg-gradient-to-br ${card.color || 'from-slate-500 to-slate-600'} mb-3`} />
-        {/* Przetwarzanie tytułu */}
         <div className="text-white font-bold text-center">
           {parseBackendTranslation(card.title) || (card.titleKey ? t(card.titleKey) : '')}
         </div>
@@ -244,12 +239,17 @@ interface CardDetailPanelProps {
 
 function CardDetailPanel({ card, playerXP, onUpgrade, onUnlock }: CardDetailPanelProps) {
   const { t } = useTranslation();
+  
+  // Poprawka: Bezpieczne wydobycie nazwy typu, jeśli jest obiektem
+  const cardTypeDisplay = typeof card.type === 'object' && card.type !== null 
+    ? card.type.name 
+    : card.type;
+
   return (
     <div className="bg-slate-800/50 rounded-2xl p-8 border-2 border-cyan-400">
       <div className={`w-full h-64 rounded-2xl bg-gradient-to-br ${card.color || 'from-slate-500 to-slate-600'} mb-6 flex items-center justify-center`}>
         <div className="text-center text-white">
           <div className="text-6xl mb-4">📱</div>
-          {/* Przetwarzanie tytułu */}
           <div className="text-3xl font-bold">
             {parseBackendTranslation(card.title) || (card.titleKey ? t(card.titleKey) : '')}
           </div>
@@ -259,12 +259,12 @@ function CardDetailPanel({ card, playerXP, onUpgrade, onUnlock }: CardDetailPane
       <div className="space-y-4">
         <div>
           <div className="text-slate-400 text-sm">{t('shop.type')}</div>
-          <div className="text-white text-lg font-bold uppercase">{card.type}</div>
+          {/* Poprawka: renderowanie bezpiecznej zmiennej cardTypeDisplay */}
+          <div className="text-white text-lg font-bold uppercase">{cardTypeDisplay}</div>
         </div>
 
         <div>
           <div className="text-slate-400 text-sm">{t('shop.description')}</div>
-          {/* Przetwarzanie opisu */}
           <div className="text-white text-lg">
             {parseBackendTranslation(card.description) || (card.descriptionKey ? t(card.descriptionKey) : '')}
           </div>
