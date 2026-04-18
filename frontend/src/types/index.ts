@@ -1,9 +1,60 @@
 // frontend/src/types/index.ts
-export type AppView = 'MENU' | 'DIFFICULTY' | 'MAP' | 'BATTLE';
 
+// 1. STANY APLIKACJI (Widoki)
+export type AppView = 'MENU' | 'DIFFICULTY' | 'MAP' | 'BATTLE';
 export type DifficultyLevel = 'EASY' | 'MEDIUM' | 'HARD';
 
-export interface GameStateResponse {
-    gameId: string;
-    currentCapital: number;
+// 2. MODELE BAZODANOWE (Odpowiedniki z backendu)
+
+export interface User {
+    id: number;
+    username: string;
+    email: string;
+    oauth_id?: string;
+    createdAt: string;
+    updatedAt: string;
+    cards?: Card[];
+    adventure?: Adventure;
+}
+
+export interface CardType {
+    id: number;
+    name: string; // np. "ATAK", "OBRONA", "WSPARCIE"
+}
+
+// To jest to, co backend trzyma w formacie JSON w kolumnie cardAction
+export interface CardAction {
+    value?: number;         // Wartość ataku/obrony
+    drawsCards?: number;    // Ile kart dobiera
+    addsActions?: number;   // Ile akcji dodaje
+    exhausts?: boolean;     // Czy karta znika po użyciu
+}
+
+export interface Card {
+    id: number;
+    name: string;
+    typeId: number;
+    type?: CardType;
+    description: string;
+    upgradeToId?: number;
+    upgradeTo?: Card;
+    cardAction: CardAction; // Backend wyśle tu sparsowany JSON
+}
+
+export interface BuffContent {
+    // Przykładowe statystyki buffów z JSONa
+    extraCapital?: number;
+    extraCushionPerTurn?: number;
+}
+
+export interface Buff {
+    id: number;
+    buffContent: BuffContent;
+}
+
+export interface Adventure {
+    id: number;
+    name: string;
+    userId: number;
+    buffs?: Buff[];
 }
