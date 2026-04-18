@@ -16,7 +16,6 @@ type gormUserRepo struct {
 	DB *gorm.DB
 }
 
-// Ta funkcja jest KLUCZOWA - używasz jej w main.go
 func NewUserRepository(db *gorm.DB) UserRepository {
 	return &gormUserRepo{DB: db}
 }
@@ -31,7 +30,8 @@ func (r *gormUserRepo) GetByEmail(email string) (*models.User, error) {
 
 func (r *gormUserRepo) GetByOAuthID(oauthID string) (*models.User, error) {
 	var user models.User
-	if err := r.DB.Where("o_auth_id = ?", oauthID).First(&user).Error; err != nil {
+	// Preload Adventure and Adventure.Buffs (nested preload)
+	if err := r.DB.Preload("Cards").Preload("Adventure.Buffs").Where("o_auth_id = ?", oauthID).First(&user).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil

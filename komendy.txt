@@ -1,1 +1,8 @@
 curl -i http://localhost:8080/api/v1/auth/google/login
+
+curl -i http://localhost:8080/ping
+
+
+
+curl -i http://localhost:8080/api/v1/
+curl -i -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE" http://localhost:8080/api/v1/
