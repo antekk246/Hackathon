@@ -117,6 +117,9 @@ export function CardSelection({
                 onDetails={() => setSelectedCardDetail(card.id)}
               />
             ))}
+            {availableCards.length === 0 && (
+               <div className="text-slate-400 p-4">{t('selection.noCardsAvailable', 'Nie masz jeszcze żadnych kart.')}</div>
+            )}
           </div>
         </div>
 

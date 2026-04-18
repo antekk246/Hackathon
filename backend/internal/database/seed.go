@@ -2,131 +2,194 @@ package database
 
 import (
 	"backend/internal/models"
-	"fmt"
 	"log"
 
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
-// Seed fills the database with static game data and test instances.
 func Seed(db *gorm.DB) error {
-	log.Println("Starting database seeding...")
+	log.Println("Rozpoczynanie seedowania bazy danych edukacyjnej gry finansowej...")
 
-	// 1. Seed Card Types
+	// 1. Kategorie kart (TypeID)
 	cardTypes := []models.CardType{
-		{Name: "Attack"},
-		{Name: "Skill"},
-		{Name: "Power"},
+		{Name: "Finanse (Atak)"},          // Karty rozwiązujące dług/problem
+		{Name: "Bezpieczeństwo (Obrona)"}, // Karty budujące poduszkę
+		{Name: "Strategia (Utility)"},     // Dobieranie kart, dodatkowe akcje
 	}
 	for i := range cardTypes {
-		if err := db.Where("name = ?", cardTypes[i].Name).FirstOrCreate(&cardTypes[i]).Error; err != nil {
-			return fmt.Errorf("error seeding card type: %w", err)
-		}
+		db.Where("name = ?", cardTypes[i].Name).FirstOrCreate(&cardTypes[i])
 	}
 
-	// 2. Create Upgraded Cards (So we can link base cards to them)
-	strikePlus := models.Card{
-		Name:        "Strike+",
-		TypeID:      &cardTypes[0].ID,
-		Description: "Zadaj 9 obrażeń.",
-		UpgradeCost: 0,
-		CardAction:  datatypes.JSON([]byte(`{"action": "damage", "value": 9}`)),
-	}
-	db.Where("name = ?", strikePlus.Name).FirstOrCreate(&strikePlus)
-
-	defendPlus := models.Card{
-		Name:        "Defend+",
-		TypeID:      &cardTypes[1].ID,
-		Description: "Zyskaj 8 pancerza.",
-		UpgradeCost: 0,
-		CardAction:  datatypes.JSON([]byte(`{"action": "block", "value": 8}`)),
-	}
-	db.Where("name = ?", defendPlus.Name).FirstOrCreate(&defendPlus)
-
-	// 3. Seed Base Cards
-	baseCards := []models.Card{
+	// 2. Definicja kart (Podstawowe + Dodatkowe do 15 sztuk)
+	// UWAGA: UpgradeToID można dodać analogicznie jak w poprzednim przykładzie
+	cards := []models.Card{
+		// --- ZESTAW PODSTAWOWY (STARTOWY) ---
 		{
-			Name:        "Strike",
+			Name:        "Gotówka",
 			TypeID:      &cardTypes[0].ID,
-			Description: "Zadaj 6 obrażeń.",
-			UpgradeCost: 50,
-			UpgradeToID: &strikePlus.ID,
-			CardAction:  datatypes.JSON([]byte(`{"action": "damage", "value": 6}`)),
+			Description: "Spłacasz 50 PLN problemu.",
+			CardAction:  datatypes.JSON([]byte(`{"action": "damage", "value": 50}`)),
 		},
 		{
-			Name:        "Defend",
+			Name:        "Konto Oszczędnościowe",
 			TypeID:      &cardTypes[1].ID,
-			Description: "Zyskaj 5 pancerza.",
-			UpgradeCost: 50,
-			UpgradeToID: &defendPlus.ID,
-			CardAction:  datatypes.JSON([]byte(`{"action": "block", "value": 5}`)),
+			Description: "Zyskaj 50 PLN Poduszki Finansowej.",
+			CardAction:  datatypes.JSON([]byte(`{"action": "block", "value": 50}`)),
 		},
 		{
-			Name:        "Fireball",
+			Name:        "Szybka Analiza",
+			TypeID:      &cardTypes[2].ID,
+			Description: "Dobierz 2 karty.",
+			CardAction:  datatypes.JSON([]byte(`{"action": "draw", "value": 2}`)),
+		},
+		{
+			Name:        "Porada Eksperta",
+			TypeID:      &cardTypes[2].ID,
+			Description: "Zyskaj +1 Akcję i 30 PLN Poduszki. (Wyczerpanie)",
+			CardAction:  datatypes.JSON([]byte(`{"action": "multi", "energy": 1, "block": 30, "exhaust": true}`)),
+		},
+
+		// --- KARTY DODATKOWE (DO ZDOBYCIA/KUPNA) ---
+		{
+			Name:        "Lokata Terminowa",
+			TypeID:      &cardTypes[1].ID,
+			Description: "Zyskaj 120 PLN Poduszki. Koszt: 2 Akcje.",
+			CardAction:  datatypes.JSON([]byte(`{"action": "block", "value": 120, "cost": 2}`)),
+		},
+		{
+			Name:        "Przelew Ekspresowy",
 			TypeID:      &cardTypes[0].ID,
-			Description: "Zadaj 12 obrażeń. Koszt: 2 Energii.",
-			UpgradeCost: 100,
-			CardAction:  datatypes.JSON([]byte(`{"action": "damage", "value": 12, "cost": 2}`)),
+			Description: "Natychmiast spłacasz 80 PLN długu.",
+			CardAction:  datatypes.JSON([]byte(`{"action": "damage", "value": 80}`)),
+		},
+		{
+			Name:        "Budżet Domowy",
+			TypeID:      &cardTypes[2].ID,
+			Description: "W tej turze wszystkie karty 'Gotówka' są o 20% skuteczniejsze.",
+			CardAction:  datatypes.JSON([]byte(`{"action": "buff_cash", "value": 1.2}`)),
+		},
+		{
+			Name:        "Inwestycja w Wiedzę",
+			TypeID:      &cardTypes[2].ID,
+			Description: "Dobierz 3 karty. Odrzuć 1.",
+			CardAction:  datatypes.JSON([]byte(`{"action": "draw_discard", "draw": 3, "discard": 1}`)),
+		},
+		{
+			Name:        "Weryfikacja Dwuskładnikowa",
+			TypeID:      &cardTypes[1].ID,
+			Description: "Zyskaj 40 PLN Poduszki. Następny atak wroga jest o 50% słabszy.",
+			CardAction:  datatypes.JSON([]byte(`{"action": "block_weaken", "value": 40}`)),
+		},
+		{
+			Name:        "Zwrot Podatku",
+			TypeID:      &cardTypes[0].ID,
+			Description: "Zadaj 150 PLN obrażeń. (Można użyć tylko jeśli masz >200 PLN Poduszki).",
+			CardAction:  datatypes.JSON([]byte(`{"action": "conditional_damage", "value": 150, "req": 200}`)),
+		},
+		{
+			Name:        "Aplikacja Mobilna IKO",
+			TypeID:      &cardTypes[2].ID,
+			Description: "Zmniejsz koszt następnej karty w tej turze do 0.",
+			CardAction:  datatypes.JSON([]byte(`{"action": "reduce_cost"}`)),
+		},
+		{
+			Name:        "Fundusz Awaryjny",
+			TypeID:      &cardTypes[1].ID,
+			Description: "Zmień całą posiadaną Gotówkę na ręce w Poduszkę (1:1).",
+			CardAction:  datatypes.JSON([]byte(`{"action": "convert_hand"}`)),
+		},
+		{
+			Name:        "Dywersyfikacja",
+			TypeID:      &cardTypes[2].ID,
+			Description: "Zadaj 40 obrażeń i zyskaj 40 Poduszki.",
+			CardAction:  datatypes.JSON([]byte(`{"action": "hybrid", "dmg": 40, "block": 40}`)),
+		},
+		{
+			Name:        "Asystent AI",
+			TypeID:      &cardTypes[2].ID,
+			Description: "Podejrzyj 3 pierwsze karty z talii. Wybierz jedną na rękę.",
+			CardAction:  datatypes.JSON([]byte(`{"action": "scry", "value": 3}`)),
+		},
+		{
+			Name:        "Płatność Blik",
+			TypeID:      &cardTypes[0].ID,
+			Description: "Szybki atak za 40. Jeśli to wykończy wroga, dobierz kartę.",
+			CardAction:  datatypes.JSON([]byte(`{"action": "execute", "value": 40}`)),
 		},
 	}
-	for i := range baseCards {
-		if err := db.Where("name = ?", baseCards[i].Name).FirstOrCreate(&baseCards[i]).Error; err != nil {
-			return fmt.Errorf("error seeding base card: %w", err)
-		}
+
+	for i := range cards {
+		db.Where("name = ?", cards[i].Name).FirstOrCreate(&cards[i])
 	}
 
-	// 4. Seed Enemies
+	// 3. Przeciwnicy (Zgodnie z Twoją specyfikacją)
 	enemies := []models.Enemy{
-		{EnemyLevel: 1, IsBoss: false, EnemyContent: datatypes.JSON([]byte(`{"name": "Green Slime", "hp": 20, "dmg": 3}`))},
-		{EnemyLevel: 2, IsBoss: false, EnemyContent: datatypes.JSON([]byte(`{"name": "Angry Rat", "hp": 15, "dmg": 5}`))},
-		{EnemyLevel: 3, IsBoss: true, EnemyContent: datatypes.JSON([]byte(`{"name": "Slime King", "hp": 120, "dmg": 10, "ability": "split"}`))},
+		{
+			EnemyLevel: 1,
+			IsBoss:     false,
+			EnemyContent: datatypes.JSON([]byte(`{
+                "name": "Fałszywy SMS", 
+                "hp": 150, 
+                "dmg": 40, 
+                "desc": "Próbuje wyłudzić drobne kwoty."
+            }`)),
+		},
+		{
+			EnemyLevel: 2,
+			IsBoss:     false,
+			EnemyContent: datatypes.JSON([]byte(`{
+                "name": "Nagła Naprawa Roweru", 
+                "hp": 350, 
+                "dmg": 120, 
+                "pattern": "strong_attack_then_cooldown"
+            }`)),
+		},
+		{
+			EnemyLevel: 3,
+			IsBoss:     true,
+			EnemyContent: datatypes.JSON([]byte(`{
+                "name": "Nieuczciwy Sprzedawca", 
+                "hp": 600, 
+                "dmg": 60, 
+                "special": "Ukryta Opłata (Trash Card)"
+            }`)),
+		},
 	}
 	for _, e := range enemies {
 		db.Where("enemy_content = ?", e.EnemyContent).FirstOrCreate(&e)
 	}
 
-	// 5. Seed Rewards & Events
-	reward1 := models.Reward{RewardLevel: 1, RewardContent: datatypes.JSON([]byte(`{"gold": 50, "msg": "Found a pouch!"}`))}
-	db.Where("reward_content = ?", reward1.RewardContent).FirstOrCreate(&reward1)
-
-	event1 := models.Event{
-		RewardID:    &reward1.ID,
-		CardsOnHand: datatypes.JSON([]byte(`{"title": "Old Camp", "desc": "Something shines in the ashes."}`)),
-	}
-	db.Where("cards_on_hand = ?", event1.CardsOnHand).FirstOrCreate(&event1)
-
-	// --- DUPLICATE & TEST USER SECTION ---
-
-	// 6. Create/Find Test User
+	// 4. Testowy użytkownik z talii startowej (10 kart)
 	testUser := models.User{
-		Username: "TestPlayer",
-		Email:    "test@example.com",
-		OAuthID:  "test-oauth-id-123",
-		Money:    1000, // Give them plenty of money for testing upgrades
+		Username: "StudentPKO",
+		Email:    "student@pko.pl",
+		Money:    500,
 	}
-	if err := db.Where("email = ?", testUser.Email).FirstOrCreate(&testUser).Error; err != nil {
-		return fmt.Errorf("error seeding test user: %w", err)
-	}
+	db.Where("email = ?", testUser.Email).FirstOrCreate(&testUser)
 
-	// 7. Clear old inventory for this user (to ensure fresh test state)
+	// Czyszczenie starej talii
 	db.Where("user_id = ?", testUser.ID).Delete(&models.UserCard{})
 
-	// 8. Give the user duplicates (Instances)
-	// We are manually creating rows in the 'user_cards' join table
-	userInventory := []models.UserCard{
-		{UserID: testUser.ID, CardID: baseCards[0].ID}, // Strike #1 (InstanceID will be unique)
-		{UserID: testUser.ID, CardID: baseCards[0].ID}, // Strike #2 (Duplicate)
-		{UserID: testUser.ID, CardID: baseCards[2].ID}, // Fireball #1
-		{UserID: testUser.ID, CardID: baseCards[2].ID}, // Fireball #2 (Duplicate)
+	// Budowanie talii 10 kart: 4x Gotówka, 4x Konto, 1x Analiza, 1x Porada
+	starterDeck := []struct {
+		name  string
+		count int
+	}{
+		{"Gotówka", 4},
+		{"Konto Oszczędnościowe", 4},
+		{"Szybka Analiza", 1},
+		{"Porada Eksperta", 1},
 	}
 
-	for _, uc := range userInventory {
-		if err := db.Create(&uc).Error; err != nil {
-			log.Printf("Failed to create card instance: %v", err)
+	for _, entry := range starterDeck {
+		var card models.Card
+		db.Where("name = ?", entry.name).First(&card)
+		for i := 0; i < entry.count; i++ {
+			db.Create(&models.UserCard{UserID: testUser.ID, CardID: card.ID})
 		}
 	}
 
-	log.Printf("Seeding complete! User '%s' has %d cards ready for duplicate/upgrade testing.", testUser.Username, len(userInventory))
+	log.Println("Seedowanie zakończone sukcesem!")
 	return nil
 }

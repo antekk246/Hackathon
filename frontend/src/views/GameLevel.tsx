@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Heart, AlertTriangle, Settings, HelpCircle, Globe } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -240,9 +240,13 @@ export function GameLevel({ onEndTurn, onBackToMenu, onShowTutorial, difficulty 
               <CharacterMedia
                 src={playerMediaSrc}
                 alt="Player Character"
-                className="w-56 h-72 object-contain drop-shadow-2xl"
+                className="w-3/4 h-3/4 object-contain drop-shadow-2xl transition-transform duration-300 hover:scale-105"
               />
             )}
+            
+            <div className="absolute bottom-2 w-full text-center bg-black/50 py-1">
+              <div className="text-sm font-bold text-cyan-300">{t('gameLevel.you')}</div>
+            </div>
           </div>
           <HealthBar
             current={battle.playerHealth}
@@ -310,25 +314,23 @@ export function GameLevel({ onEndTurn, onBackToMenu, onShowTutorial, difficulty 
           <div className="relative">
             {enemyMediaSrc ? (
               <CharacterMedia
-                src={enemyMediaSrc}
+                src={getEnemyImage()}
                 alt="Enemy"
-                className="w-56 h-72 object-contain drop-shadow-2xl"
+                className="w-3/4 h-3/4 object-contain drop-shadow-2xl transition-transform duration-300 hover:scale-105" 
               />
-            ) : (
-              <div className="w-56 h-72 bg-gradient-to-br from-red-900 to-purple-900 rounded-2xl flex items-center justify-center border-4 border-red-500 shadow-2xl shadow-red-500/50">
-                <div className="text-center px-4">
-                  <AlertTriangle className="w-20 h-20 text-red-400 mx-auto mb-2 animate-pulse" />
-                  <div className="text-xl font-bold text-red-300">{t('gameLevel.phishingScammer')}</div>
-                  <div className="text-xs text-red-400 mt-1">
-                    "{t('gameLevel.phishingQuote')}"
-                  </div>
-                </div>
+              
+              <div className="absolute bottom-2 w-full text-center bg-black/50 py-1">
+                <div className="text-sm font-bold text-red-300">{getEnemyName()}</div>
+              </div>
+            </div>
+
+            {enemyHealth > 0 && (
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg z-30 transition-opacity">
+                {t('gameLevel.nextAttack', { damage: 15 })}
               </div>
             )}
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
-              {t('gameLevel.nextAttack', { damage: 15 })}
-            </div>
           </div>
+          
           <HealthBar
             current={battle.enemyHealth}
             max={90}
@@ -388,11 +390,11 @@ function HealthBar({ current, max, color, label }: HealthBarProps) {
     : 'from-red-500 to-orange-500';
 
   return (
-    <div className="w-56">
+    <div className="w-56 transition-opacity duration-500" style={{ opacity: current === 0 ? 0.3 : 1 }}>
       <div className="flex justify-between mb-1">
         <span className="text-white text-xs font-bold">{label}</span>
         <span className="text-white text-xs font-bold flex items-center gap-1">
-          <Heart className="w-3 h-3" />
+          <Heart className={`w-3 h-3 ${current === 0 ? 'text-gray-500' : ''}`} />
           {current}/{max}
         </span>
       </div>
@@ -452,12 +454,10 @@ function PhoneScreenCard({ card, selected, onSelect, disabled }: PhoneScreenCard
         ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}
       `}
     >
-      {/* Phone screen frame */}
       <div className="absolute inset-2 bg-slate-950 rounded-2xl overflow-hidden">
         {/* Phone notch */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-14 h-5 bg-slate-900 rounded-b-2xl z-10" />
 
-        {/* Phone content */}
         <div className={`absolute inset-0 pt-7 pb-3 px-2 bg-gradient-to-br ${card.color} flex flex-col justify-between`}>
           <div className="text-white text-center">
             <div className="text-[10px] font-bold mb-1 opacity-80">{card.type.toUpperCase()}</div>
@@ -469,7 +469,6 @@ function PhoneScreenCard({ card, selected, onSelect, disabled }: PhoneScreenCard
           </div>
         </div>
 
-        {/* Phone home indicator */}
         <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-10 h-1 bg-slate-600 rounded-full" />
       </div>
     </motion.button>

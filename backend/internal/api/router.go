@@ -41,6 +41,10 @@ func SetupRouter(authH *handler.AuthHandler, adventureH *handler.AdventureHandle
 		protected := v1.Group("/")
 		protected.Use(middleware.JWTAuth())
 		{
+			authProtected := protected.Group("/auth")
+			{
+				authProtected.GET("/me", authH.GetMe)
+			}
 			// Adventure routes
 			adventures := protected.Group("/adventures")
 			{

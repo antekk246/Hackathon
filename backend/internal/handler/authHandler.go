@@ -66,7 +66,7 @@ func (h *AuthHandler) GoogleCallback(c *gin.Context) {
 				Username: googleUser.Name,
 				Email:    googleUser.Email,
 				OAuthID:  googleUser.Sub, // <-- TO ZAPOBIEGA BŁĘDOWI DUPLIKATU (ustawia unikalne ID zamiast pustego stringa "")
-				Money:    100,            // (Opcjonalnie) Możesz dać graczowi trochę złota na start!
+				Money:    900,            // (Opcjonalnie) Możesz dać graczowi trochę złota na start!
 			}
 
 			// Zapisujemy do bazy i sprawdzamy, czy zapis się powiódł
@@ -99,4 +99,34 @@ func (h *AuthHandler) GoogleCallback(c *gin.Context) {
 
 	redirectURL := frontendURL + "/?token=" + appToken
 	c.Redirect(http.StatusTemporaryRedirect, redirectURL)
+}
+func (h *AuthHandler) GetMe(c *gin.Context) {
+	// 1. Pobierz ID z kontekstu (ustawione przez middleware JWT)
+	val, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Brak autoryzacji - zaloguj się ponownie"})
+		return
+	}
+
+	// 2. Rzutowanie typu - middleware zazwyczaj przechowuje to jako uint lub float64 (z JSON)
+	var userID uint
+	switch v := val.(type) {
+	case uint:
+		userID = v
+	case float64:
+		userID = uint(v)
+	default:
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Błędny format ID użytkownika"})
+		return
+	}
+
+	// 3. Pobierz użytkownika korzystając z nowej metody Repo
+	user, err := h.UserRepo.GetByID(userID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Użytkownik nie istnieje w bazie danych"})
+		return
+	}
+
+	// 4. Sukces! Zwracamy obiekt użytkownika (Frontend dostanie Money i Cards)
+	c.JSON(http.StatusOK, user)
 }

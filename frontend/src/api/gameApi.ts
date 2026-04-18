@@ -48,7 +48,11 @@ export const gameApi = {
         if (!response.ok) throw new Error('Błąd zakupu karty');
         return response.json();
     },
-
+    getUserProfile: async (): Promise<User> => {
+        const response = await fetch(`${BASE_URL}/auth/me`, { headers: getHeaders() });
+        if (!response.ok) throw new Error('Błąd pobierania profilu');
+        return response.json();
+    },
     // ADVENTURES
     startAdventure: async (difficulty: number, cardIds: number[], force: boolean = false): Promise<Adventure> => {
         const response = await fetch(`${BASE_URL}/adventures`, {
