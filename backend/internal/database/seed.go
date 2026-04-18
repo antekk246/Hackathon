@@ -26,13 +26,13 @@ func Seed(db *gorm.DB) error {
 	cards := []models.Card{
 		// --- ZESTAW PODSTAWOWY (STARTOWY) ---
 		{
-			Name:        "Gotówka",
+			Name:        "Gotówka|Cash",
 			TypeID:      &cardTypes[0].ID,
 			Description: "Spłacasz 50 PLN problemu.",
 			CardAction:  datatypes.JSON([]byte(`{"action": "damage", "value": 50}`)),
 		},
 		{
-			Name:        "Konto Oszczędnościowe",
+			Name:        "Konto Oszczędnościowe|Savings Account",
 			TypeID:      &cardTypes[1].ID,
 			Description: "Zyskaj 50 PLN Poduszki Finansowej.",
 			CardAction:  datatypes.JSON([]byte(`{"action": "block", "value": 50}`)),
