@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/oauth2"
@@ -87,8 +88,15 @@ func (h *AuthHandler) GoogleCallback(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"token": appToken,
-		"user":  user,
-	})
+	// Dynamiczne przekierowanie: najpierw szukamy w środowisku, potem w Origin, na końcu default
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		frontendURL = c.Request.Header.Get("Origin")
+	}
+	if frontendURL == "" {
+		frontendURL = "http://localhost:5173" // Fallback dla lokalnego dev
+	}
+
+	redirectURL := frontendURL + "/?token=" + appToken
+	c.Redirect(http.StatusTemporaryRedirect, redirectURL)
 }

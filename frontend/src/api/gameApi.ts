@@ -14,7 +14,8 @@ const getHeaders = () => {
 export const gameApi = {
     // AUTH
     loginWithGoogle: () => {
-        window.location.href = `${BASE_URL}/auth/google/login`;
+        // Zmieniamy na adres produkcyjny na Render
+        window.location.href = `https://hackathon-e7kx.onrender.com/api/v1/auth/google/login`;
     },
 
     // CARDS
