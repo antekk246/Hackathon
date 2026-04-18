@@ -1,20 +1,20 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Shield, Settings, ShoppingBag, LogIn } from "lucide-react";
+import {LogOut, Shield, Settings, ShoppingBag, LogIn } from "lucide-react";
 import { SettingsModal } from "../components/SettingsModal";
 import { gameApi } from "../api/gameApi";
-
+import { handleLogout } from "../App"; // Importujemy funkcję handleLogout z App.tsx
 interface MainMenuProps {
   onStartGame: (difficulty: 'easy' | 'medium' | 'hard') => void;
   onOpenShop: () => void;
   playerXP: number;
+  isLoggedIn: boolean;
 }
 
-export function MainMenu({ onStartGame, onOpenShop, playerXP }: MainMenuProps) {
+export function MainMenu({ onStartGame, onOpenShop, playerXP, isLoggedIn }: MainMenuProps) {
   const { t, i18n } = useTranslation();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const isLoggedIn = !!localStorage.getItem('token');
-
+  
   return (
     <div className="relative w-full h-full bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 overflow-hidden">
       {/* Animated background grid */}
@@ -111,6 +111,15 @@ export function MainMenu({ onStartGame, onOpenShop, playerXP }: MainMenuProps) {
             label={t('mainMenu.securityGuide')}
             onClick={() => {}}
           />
+          {isLoggedIn && (
+      <button
+      onClick={handleLogout}
+      className="p-3 rounded-lg border-2 border-red-500/30 bg-red-500/10 text-red-400 transition-all hover:bg-red-500/20 hover:border-red-500 hover:scale-110"
+      title={t('mainMenu.logout') || 'Logout'}
+    >
+      <LogOut className="w-5 h-5" />
+    </button>
+  )}
           <div className="flex items-center gap-2">
             <MenuButton
               icon={<Settings className="w-5 h-5" />}

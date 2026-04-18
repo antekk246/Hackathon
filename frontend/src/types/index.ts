@@ -10,6 +10,7 @@ export interface User {
     id: number;
     username: string;
     email: string;
+    money: number;
     oauth_id?: string;
     createdAt: string;
     updatedAt: string;

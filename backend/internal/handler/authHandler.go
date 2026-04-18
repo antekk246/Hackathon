@@ -6,6 +6,7 @@ import (
 	"backend/pkg/jwtutil"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 
@@ -66,7 +67,7 @@ func (h *AuthHandler) GoogleCallback(c *gin.Context) {
 				Username: googleUser.Name,
 				Email:    googleUser.Email,
 				OAuthID:  googleUser.Sub, // <-- TO ZAPOBIEGA BŁĘDOWI DUPLIKATU (ustawia unikalne ID zamiast pustego stringa "")
-				Money:    100,            // (Opcjonalnie) Możesz dać graczowi trochę złota na start!
+				Money:    900,            // (Opcjonalnie) Możesz dać graczowi trochę złota na start!
 			}
 
 			// Zapisujemy do bazy i sprawdzamy, czy zapis się powiódł
@@ -99,4 +100,23 @@ func (h *AuthHandler) GoogleCallback(c *gin.Context) {
 
 	redirectURL := frontendURL + "/?token=" + appToken
 	c.Redirect(http.StatusTemporaryRedirect, redirectURL)
+}
+func (h *AuthHandler) GetMe(c *gin.Context) {
+	// 1. Pobierz ID z middleware (ustawione np. jako "userID")
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Nieautoryzowany"})
+		return
+	}
+
+	user, err := h.UserRepo.GetByOAuthID(fmt.Sprintf("%v", userID)) // Lub GetByID jeśli masz takie repo
+	// Jeśli nie masz GetByID, najbezpieczniej pobrać go po ID zapisanym w tokenie
+
+	// Uproszczony przykład (zakładając, że masz dostęp do DB bezpośrednio lub przez metodę repo)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Użytkownik nie istnieje"})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
 }

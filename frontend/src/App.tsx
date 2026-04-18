@@ -6,7 +6,10 @@ import { Tutorial } from './views/Tutorial';
 import { CardShop } from './views/CardShop';
 import { CardSelection } from './views/CardSelection';
 import { gameApi } from './api/gameApi';
-
+export const handleLogout = () => {
+  localStorage.removeItem('token');
+  window.location.reload(); 
+};
 export default function App() {
   const [gameState, setGameState] = useState<'menu' | 'game' | 'shop' | 'selection'>('menu');
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('easy');
@@ -15,15 +18,36 @@ export default function App() {
   const [hasSeenTutorial, setHasSeenTutorial] = useState(false);
   const [playerXP, setPlayerXP] = useState(500);
   const [userCards, setUserCards] = useState<Card[]>([]);
+  
+  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
 
-  useEffect(() => {
-    // 1. Sprawdź czy wróciliśmy z Google Login z tokenem w URL
+ useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
     if (token) {
       localStorage.setItem('token', token);
-      window.history.replaceState({}, document.title, "/"); // Wyczyść URL
+      setIsLoggedIn(true); // Aktualizujemy stan!
+      window.history.replaceState({}, document.title, "/");
     }
+  const tokenFromUrl = params.get('token');
+  
+  // 1. Ustal finalny token (z URL lub z pamięci)
+  const activeToken = tokenFromUrl || localStorage.getItem('token');
+  if (tokenFromUrl) {
+    localStorage.setItem('token', tokenFromUrl);
+    window.history.replaceState({}, document.title, "/");
+  }
+
+  // 2. Jeśli mamy jakikolwiek token, pobierz dane
+  if (activeToken) {
+    gameApi.getUserCards()
+      .then(setUserCards)
+      .catch((err) => {
+        console.error("Sesja wygasła lub błąd sieci:", err);
+        // Opcjonalnie: jeśli błąd to 401, wyloguj
+        // localStorage.removeItem('token');
+      });
+  }
 
     const seen = localStorage.getItem('hasSeenTutorial');
     if (seen === 'true') {
@@ -32,6 +56,21 @@ export default function App() {
 
     // Pobierz karty użytkownika jeśli jest zalogowany
     if (localStorage.getItem('token')) {
+        gameApi.getUserCards().then(setUserCards).catch(console.error);
+    }
+    if (activeToken) {
+        setIsLoggedIn(true);
+        
+        // POBIERZ AKTUALNE PIENIĄDZE (XP)
+        gameApi.getUserProfile()
+            .then(user => {
+                setPlayerXP(user.money); // GORM domyślnie daje dużą literę "Money" w JSON
+            })
+            .catch(err => {
+                console.error("Błąd ładowania profilu:", err);
+                if (err.message.includes('401')) handleLogout();
+            });
+
         gameApi.getUserCards().then(setUserCards).catch(console.error);
     }
   }, []);
@@ -88,6 +127,7 @@ export default function App() {
     <div className="size-full">
       {gameState === 'menu' && (
         <MainMenu
+        isLoggedIn={isLoggedIn}
           onStartGame={handleStartGame}
           onOpenShop={() => setGameState('shop')}
           playerXP={playerXP}

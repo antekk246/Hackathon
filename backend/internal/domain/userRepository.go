@@ -67,5 +67,26 @@ func (r *gormUserRepo) BuyCard(userID uint, cardID uint) error {
 	})
 }
 func (r *gormUserRepo) Create(user *models.User) error {
-	return r.DB.Create(user).Error
+	return r.DB.Transaction(func(tx *gorm.DB) error {
+		// 1. Create the user first to get the generated ID
+		if err := tx.Create(user).Error; err != nil {
+			return err
+		}
+
+		// 2. Prepare the initial cards (IDs 1-10)
+		var userCards []models.UserCard
+		for i := uint(1); i <= 10; i++ {
+			userCards = append(userCards, models.UserCard{
+				UserID: user.ID, // user.ID is now populated after tx.Create
+				CardID: i,
+			})
+		}
+
+		// 3. Bulk insert the relation records
+		if err := tx.Create(&userCards).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
 }
