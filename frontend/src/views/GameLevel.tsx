@@ -26,47 +26,18 @@ interface PhoneCard {
   color: string;
 }
 
+// 1. MAX 10 KART NA START
 const phoneCardDefinitions: PhoneCard[] = [
-  {
-    id: 1,
-    type: 'block',
-    titleKey: 'cards.blockSender.title',
-    descriptionKey: 'cards.blockSender.description',
-    cost: 1,
-    color: 'from-red-500 to-red-600'
-  },
-  {
-    id: 2,
-    type: 'report',
-    titleKey: 'cards.reportScam.title',
-    descriptionKey: 'cards.reportScam.description',
-    cost: 1,
-    color: 'from-orange-500 to-orange-600'
-  },
-  {
-    id: 3,
-    type: 'verify',
-    titleKey: 'cards.verifySource.title',
-    descriptionKey: 'cards.verifySource.description',
-    cost: 1,
-    color: 'from-blue-500 to-blue-600'
-  },
-  {
-    id: 4,
-    type: 'ignore',
-    titleKey: 'cards.deleteIgnore.title',
-    descriptionKey: 'cards.deleteIgnore.description',
-    cost: 1,
-    color: 'from-gray-500 to-gray-600'
-  },
-  {
-    id: 5,
-    type: 'block',
-    titleKey: 'cards.twoFAShield.title',
-    descriptionKey: 'cards.twoFAShield.description',
-    cost: 1,
-    color: 'from-green-500 to-green-600'
-  }
+  { id: 1, type: 'block', titleKey: 'cards.blockSender.title', descriptionKey: 'cards.blockSender.description', cost: 1, color: 'from-red-500 to-red-600' },
+  { id: 2, type: 'report', titleKey: 'cards.reportScam.title', descriptionKey: 'cards.reportScam.description', cost: 1, color: 'from-orange-500 to-orange-600' },
+  { id: 3, type: 'verify', titleKey: 'cards.verifySource.title', descriptionKey: 'cards.verifySource.description', cost: 1, color: 'from-blue-500 to-blue-600' },
+  { id: 4, type: 'ignore', titleKey: 'cards.deleteIgnore.title', descriptionKey: 'cards.deleteIgnore.description', cost: 1, color: 'from-gray-500 to-gray-600' },
+  { id: 5, type: 'block', titleKey: 'cards.twoFAShield.title', descriptionKey: 'cards.twoFAShield.description', cost: 1, color: 'from-green-500 to-green-600' },
+  { id: 6, type: 'verify', titleKey: 'cards.checkLink.title', descriptionKey: 'cards.checkLink.description', cost: 1, color: 'from-teal-500 to-teal-600' },
+  { id: 7, type: 'report', titleKey: 'cards.callBank.title', descriptionKey: 'cards.callBank.description', cost: 1, color: 'from-indigo-500 to-indigo-600' },
+  { id: 8, type: 'ignore', titleKey: 'cards.spamFolder.title', descriptionKey: 'cards.spamFolder.description', cost: 1, color: 'from-purple-500 to-purple-600' },
+  { id: 9, type: 'block', titleKey: 'cards.updateOS.title', descriptionKey: 'cards.updateOS.description', cost: 1, color: 'from-pink-500 to-pink-600' },
+  { id: 10, type: 'verify', titleKey: 'cards.passwordChange.title', descriptionKey: 'cards.passwordChange.description', cost: 1, color: 'from-cyan-500 to-cyan-600' }
 ];
 
 interface GameLevelProps {
@@ -107,6 +78,11 @@ export function GameLevel({ onEndTurn, onBackToMenu, onShowTutorial, difficulty 
   const [showMenu, setShowMenu] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
+  // 2. DYNAMICZNA LICZBA KART (Ręka i odrzucone)
+  const [availableCards, setAvailableCards] = useState<PhoneCard[]>(phoneCardDefinitions);
+  const [discardedCards, setDiscardedCards] = useState<PhoneCard[]>([]);
+  const [showSelectedCards, setShowSelectedCards] = useState(false);
+
   // Enemy state
   const [enemyHealth, setEnemyHealth] = useState(100);
   const [enemyMaxHealth] = useState(100);
@@ -133,7 +109,6 @@ export function GameLevel({ onEndTurn, onBackToMenu, onShowTutorial, difficulty 
     }
   };
 
-  // Enemy damage animation effect
   useEffect(() => {
     if (enemyHealth < prevEnemyHealth && enemyHealth > 0) {
       setIsEnemyTakingDamage(true);
@@ -142,7 +117,6 @@ export function GameLevel({ onEndTurn, onBackToMenu, onShowTutorial, difficulty 
     setPrevEnemyHealth(enemyHealth);
   }, [enemyHealth, prevEnemyHealth]);
 
-  // Player damage animation effect
   useEffect(() => {
     if (playerHealth < prevPlayerHealth && playerHealth > 0) {
       setIsPlayerTakingDamage(true);
@@ -151,64 +125,58 @@ export function GameLevel({ onEndTurn, onBackToMenu, onShowTutorial, difficulty 
     setPrevPlayerHealth(playerHealth);
   }, [playerHealth, prevPlayerHealth]);
 
-  // Test Functions
   const testPlayerDamage = () => {
     if (enemyHealth === 0) return; 
     setIsEnemyAttacking(true);
-    
-    setTimeout(() => {
-      setPlayerHealth(prev => Math.max(0, prev - 20)); 
-    }, 150); 
-
-    setTimeout(() => {
-      setIsEnemyAttacking(false);
-    }, 300);
+    setTimeout(() => { setPlayerHealth(prev => Math.max(0, prev - 20)); }, 150); 
+    setTimeout(() => { setIsEnemyAttacking(false); }, 300);
   };
 
   const testEnemyDamage = () => {
     if (playerHealth === 0) return; 
     setIsPlayerAttacking(true);
-    
-    setTimeout(() => {
-      setEnemyHealth(prev => Math.max(0, prev - 25)); 
-    }, 150); 
-
-    setTimeout(() => {
-      setIsPlayerAttacking(false);
-    }, 300);
+    setTimeout(() => { setEnemyHealth(prev => Math.max(0, prev - 25)); }, 150); 
+    setTimeout(() => { setIsPlayerAttacking(false); }, 300);
   };
-  const [usedCardsCount, setUsedCardsCount] = useState(0);
-  const [showSelectedCards, setShowSelectedCards] = useState(false);
 
-  // Battle turn logic z animacjami
   const battle = useBattleTurn();
 
+  // 4. FUNKCJA ZAGRANIA KARTY (PLAY)
   const handlePlayCard = async () => {
-    if (selectedCards.length === 0 || battle.isAnimating || (5 - usedCardsCount) === 0) return;
+    if (selectedCards.length === 0 || battle.isAnimating) return;
 
-    // PHASE 1: Show selected cards in center
+    const playedCardId = selectedCards[0];
+    const playedCard = availableCards.find(c => c.id === playedCardId);
+
     setShowSelectedCards(true);
-
-    // Wait for cards to appear
     await new Promise(resolve => setTimeout(resolve, 1500));
-
-    // PHASE 2: Hide cards and play turn
     setShowSelectedCards(false);
 
-    // Play the turn
+    // Animacja bitwy z hooka
     await battle.playCard();
 
-    // Odnawiaj decisionsLeft i selectedCards co turę
-    const cardsPlayed = selectedCards.length;
-    setDecisionsLeft(2);
+    // Usuń z ręki i przenieś do odrzuconych
+    if (playedCard) {
+      setAvailableCards(prev => prev.filter(c => c.id !== playedCardId));
+      setDiscardedCards(prev => [...prev, playedCard]);
+    }
+    
+    // Zresetuj wybór
     setSelectedCards([]);
-    // Increment used cards count for all played cards
-    setUsedCardsCount(prev => prev + cardsPlayed);
+  };
+
+  // 5. FUNKCJA ZAKOŃCZENIA TURY (END TURN)
+  const handleEndTurnClick = () => {
+    // Tutaj wrzucasz logikę końca tury (np. reset punktów akcji)
+    // i odpalasz atak przeciwnika
+    setSelectedCards([]);
+    testEnemyDamage(); // Zastąp docelową funkcją ataku z useBattleTurn jeśli istnieje
+    
+    // Opcjonalnie: dobieranie nowych kart z talii na nową turę
   };
 
   return (
     <div className="relative w-full h-full bg-gradient-to-br from-slate-900 via-slate-800 to-blue-900 overflow-hidden">
-      {/* Cyberpunk grid background */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute inset-0" style={{
           backgroundImage: 'linear-gradient(rgba(59, 130, 246, 0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(59, 130, 246, 0.5) 1px, transparent 1px)',
@@ -216,7 +184,6 @@ export function GameLevel({ onEndTurn, onBackToMenu, onShowTutorial, difficulty 
         }} />
       </div>
 
-      {/* --- TEST BUTTONS PANEL (DEBUG) --- */}
       <div className="absolute top-20 left-4 z-50 flex flex-col gap-2 bg-slate-900/60 p-3 rounded-xl border border-slate-600 backdrop-blur-sm">
         <span className="text-xs text-slate-400 font-bold flex items-center gap-1 uppercase">
           <Activity className="w-3 h-3" /> {t('gameLevel.debug.animationTest')}
@@ -237,14 +204,12 @@ export function GameLevel({ onEndTurn, onBackToMenu, onShowTutorial, difficulty 
         </button>
       </div>
 
-      {/* Top bar - Decisions left only */}
       <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-10">
-        {/* Decisions left */}
         <div className="flex items-center gap-2 bg-slate-900/80 px-5 py-2 rounded-full border-2 border-yellow-500/50">
-          <span className="text-yellow-400 font-bold text-lg">{t('gameLevel.decisions', { current: Math.max(0, Math.min(2, 5 - usedCardsCount) - selectedCards.length), max: Math.min(2, 5 - usedCardsCount) })}</span>
+          {/* Debug widoku ile mamy aktualnie kart w ręce: */}
+          <span className="text-yellow-400 font-bold text-lg">Karty: {availableCards.length}/10</span>
         </div>
 
-        {/* Progress bar - centered */}
         <div className="flex-1 mx-8">
           <div className="w-full bg-slate-900/80 px-6 py-3 rounded-full border-2 border-cyan-500/50">
             <div className="flex items-center gap-3">
@@ -260,7 +225,6 @@ export function GameLevel({ onEndTurn, onBackToMenu, onShowTutorial, difficulty 
           </div>
         </div>
 
-        {/* Settings menu */}
         <div className="relative">
           <button
             onClick={() => setShowMenu(!showMenu)}
@@ -272,20 +236,14 @@ export function GameLevel({ onEndTurn, onBackToMenu, onShowTutorial, difficulty 
           {showMenu && (
             <div className="absolute top-full right-0 mt-2 bg-slate-900 border-2 border-cyan-400 rounded-xl overflow-hidden shadow-2xl min-w-[200px]">
               <button
-                onClick={() => {
-                  onShowTutorial();
-                  setShowMenu(false);
-                }}
+                onClick={() => { onShowTutorial(); setShowMenu(false); }}
                 className="w-full px-6 py-3 text-left text-white hover:bg-slate-800 transition-colors flex items-center gap-2"
               >
                 <HelpCircle className="w-5 h-5" />
                 <span>{t('gameLevel.guide')}</span>
               </button>
               <button
-                onClick={() => {
-                  setIsSettingsOpen(true);
-                  setShowMenu(false);
-                }}
+                onClick={() => { setIsSettingsOpen(true); setShowMenu(false); }}
                 className="w-full px-6 py-3 text-left text-white hover:bg-slate-800 transition-colors flex items-center gap-2"
               >
                 <Globe className="w-5 h-5" />
@@ -302,42 +260,27 @@ export function GameLevel({ onEndTurn, onBackToMenu, onShowTutorial, difficulty 
         </div>
       </div>
 
-      <SettingsModal 
-        isOpen={isSettingsOpen} 
-        onOpenChange={setIsSettingsOpen} 
-      />
+      <SettingsModal isOpen={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
 
-      {/* Deck Pile - Left bottom */}
-      <DeckPile cardsRemaining={5 - usedCardsCount} />
+      {/* Dynamiczne Deck i Discard */}
+      <DeckPile cardsRemaining={availableCards.length} />
+      <DiscardPile cardsCount={discardedCards.length} />
 
-      {/* Discard Pile - Right bottom */}
-      <DiscardPile cardsCount={usedCardsCount} />
-
-      {/* ANIMATIONS LAYER - Top level, not affected by parent positioning */}
-      {/* Playing Card Animation - shown when card is being played */}
       {battle.turnState.playingCard && battle.turnState.state === 'playing' && (
         <CardPlayAnimation card={battle.turnState.playingCard} isPlaying={true} />
       )}
-
-      {/* Flip Animation - shown during animating phase */}
       {battle.turnState.state === 'animating' && (
         <CardFlipAnimation />
       )}
-
-      {/* Damage numbers */}
       {battle.damageLog.map((log, idx) => (
         <DamageAnimation key={idx} damage={log.damage} position={log.position} />
       ))}
-
-      {/* Card Traveling Animation */}
       {battle.turnState.playingCard && (battle.turnState.state === 'playing' || battle.turnState.state === 'animating') && (
         <CardTravelingAnimation card={battle.turnState.playingCard} isVisible={true} />
       )}
 
-      {/* Battle area - Player vs Enemy */}
-      <div className="absolute top-20 left-0 right-0 bottom-72 flex items-center justify-between px-8">
+      <div className="absolute top-20 left-0 right-0 bottom-72 flex items-center justify-center gap-12 md:gap-24 px-8">
         
-        {/* Player character */}
         <motion.div className="flex flex-col items-center gap-3 relative">
           {playerHealth === 0 && (
              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 text-red-500 text-5xl font-black italic drop-shadow-[0_0_20px_rgba(220,38,38,1)] whitespace-nowrap animate-pulse">
@@ -370,17 +313,11 @@ export function GameLevel({ onEndTurn, onBackToMenu, onShowTutorial, difficulty 
               <div className="text-sm font-bold text-cyan-300">{t('gameLevel.you')}</div>
             </div>
           </div>
-          <HealthBar
-            current={battle.playerHealth}
-            max={100}
-            color="blue"
-            label={t('gameLevel.you')}
-          />
+          <HealthBar current={playerHealth} max={100} color="blue" label={t('gameLevel.you')} />
         </motion.div>
 
-        {/* CENTER: End Turn Button + State Indicator */}
+        {/* CENTER: PLAY & END TURN BUTTONS */}
         <div className="flex flex-col items-center gap-4">
-          {/* Selected Cards Display - shows chosen cards in center */}
           {showSelectedCards && selectedCards.length > 0 && (
             <motion.div 
               initial={{ scale: 0, opacity: 0 }}
@@ -411,28 +348,45 @@ export function GameLevel({ onEndTurn, onBackToMenu, onShowTutorial, difficulty 
             </motion.div>
           )}
 
-          {/* End Turn Button - PRIMARY CTA */}
           {!showSelectedCards && (
-            <motion.button
-              onClick={handlePlayCard}
-              disabled={selectedCards.length === 0 || battle.isAnimating || (5 - usedCardsCount) === 0}
-              whileHover={selectedCards.length > 0 && !battle.isAnimating && (5 - usedCardsCount) > 0 ? { scale: 1.05 } : {}}
-              whileTap={selectedCards.length > 0 && !battle.isAnimating && (5 - usedCardsCount) > 0 ? { scale: 0.95 } : {}}
-              className={`
-                px-12 py-4 rounded-full font-bold text-lg transition-all
-                ${selectedCards.length === 0 || battle.isAnimating || (5 - usedCardsCount) === 0
-                  ? 'bg-slate-600 text-slate-400 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-lg shadow-cyan-500/40 border-2 border-cyan-300/50'
-                }
-              `}
-            >
-              {battle.turnState.state === 'idle' ? t('gameLevel.endTurn') : '...'}
-            </motion.button>
+            <div className="flex flex-col gap-3 mt-4">
+              {/* Przycisk PLAY */}
+              <motion.button
+                onClick={handlePlayCard}
+                disabled={selectedCards.length === 0 || battle.isAnimating || availableCards.length === 0}
+                whileHover={selectedCards.length > 0 && !battle.isAnimating ? { scale: 1.05 } : {}}
+                whileTap={selectedCards.length > 0 && !battle.isAnimating ? { scale: 0.95 } : {}}
+                className={`
+                  px-12 py-4 rounded-full font-bold text-lg transition-all min-w-[200px]
+                  ${selectedCards.length === 0 || battle.isAnimating || availableCards.length === 0
+                    ? 'bg-slate-600 text-slate-400 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white shadow-lg shadow-green-500/40 border-2 border-green-300/50'
+                  }
+                `}
+              >
+                PLAY
+              </motion.button>
+
+              {/* Przycisk END TURN */}
+              <motion.button
+                onClick={handleEndTurnClick}
+                disabled={battle.isAnimating}
+                whileHover={!battle.isAnimating ? { scale: 1.05 } : {}}
+                whileTap={!battle.isAnimating ? { scale: 0.95 } : {}}
+                className={`
+                  px-8 py-3 rounded-full font-bold text-sm transition-all min-w-[200px]
+                  ${battle.isAnimating
+                    ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                    : 'bg-slate-800 hover:bg-slate-700 text-red-400 border border-red-500/50'
+                  }
+                `}
+              >
+                END TURN
+              </motion.button>
+            </div>
           )}
         </div>
        
-
-        {/* Enemy */}
         <motion.div className="flex flex-col items-center gap-3 relative">
           {enemyHealth === 0 && (
              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 text-cyan-400 text-5xl font-black italic drop-shadow-[0_0_20px_rgba(34,211,238,1)] whitespace-nowrap animate-bounce">
@@ -472,21 +426,16 @@ export function GameLevel({ onEndTurn, onBackToMenu, onShowTutorial, difficulty 
             )}
           </div>
           
-          <HealthBar
-            current={battle.enemyHealth}
-            max={90}
-            color="red"
-            label={t('gameLevel.scammer')}
-          />
+          <HealthBar current={enemyHealth} max={100} color="red" label={t('gameLevel.scammer')} />
         </motion.div>
       </div>
 
-      {/* Phone screen cards - Cards selection area */}
       <div className={`absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-slate-950 via-slate-900/95 to-transparent pt-20 transition-opacity duration-700 ${playerHealth === 0 || enemyHealth === 0 ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
         
+        {/* Kontener dla DYNAMICZNIE RENDEROWANYCH KART */}
         <div className="flex justify-center items-end gap-2 relative">
-          {phoneCardDefinitions.map((card, index) => {
-            const totalCards = phoneCardDefinitions.length;
+          {availableCards.map((card, index) => {
+            const totalCards = availableCards.length;
             const middleIndex = (totalCards - 1) / 2;
             const offset = index - middleIndex;
             const rotation = offset * 8;
@@ -507,13 +456,14 @@ export function GameLevel({ onEndTurn, onBackToMenu, onShowTutorial, difficulty 
                   card={card}
                   selected={selectedCards.includes(card.id)}
                   onSelect={() => {
+                    // 3. TYLKO JEDNA KARTA MOŻE BYĆ ZAZNACZONA
                     if (selectedCards.includes(card.id)) {
-                      setSelectedCards(selectedCards.filter(id => id !== card.id));
-                    } else if (selectedCards.length < 2 && battle.canSelectCard && (5 - usedCardsCount) > selectedCards.length) {
-                      setSelectedCards([...selectedCards, card.id]);
+                      setSelectedCards([]); // Odznacz
+                    } else {
+                      setSelectedCards([card.id]); // Zaznacz nową, usuwając poprzednią
                     }
                   }}
-                  disabled={battle.isAnimating || (decisionsLeft === 0 && !selectedCards.includes(card.id)) || (!selectedCards.includes(card.id) && (5 - usedCardsCount) <= selectedCards.length)}
+                  disabled={battle.isAnimating}
                 />
               </motion.div>
             );
@@ -526,9 +476,7 @@ export function GameLevel({ onEndTurn, onBackToMenu, onShowTutorial, difficulty 
 
 function HealthBar({ current, max, color, label }: HealthBarProps) {
   const percentage = (current / max) * 100;
-  const colorClasses = color === 'blue'
-    ? 'from-blue-500 to-cyan-500'
-    : 'from-red-500 to-orange-500';
+  const colorClasses = color === 'blue' ? 'from-blue-500 to-cyan-500' : 'from-red-500 to-orange-500';
 
   return (
     <div className="w-56 transition-opacity duration-500" style={{ opacity: current === 0 ? 0.3 : 1 }}>
@@ -551,27 +499,8 @@ function HealthBar({ current, max, color, label }: HealthBarProps) {
 
 function CharacterMedia({ src, alt, className }: CharacterMediaProps) {
   const isVideo = src.endsWith('.mp4') || src.endsWith('.webm') || src.endsWith('.mov');
-
-  if (isVideo) {
-    return (
-      <video
-        src={src}
-        className={className}
-        autoPlay
-        loop
-        muted
-        playsInline
-      />
-    );
-  }
-
-  return (
-    <img
-      src={src}
-      alt={alt}
-      className={className}
-    />
-  );
+  if (isVideo) return <video src={src} className={className} autoPlay loop muted playsInline />;
+  return <img src={src} alt={alt} className={className} />;
 }
 
 interface PhoneScreenCardProps {
@@ -591,24 +520,21 @@ function PhoneScreenCard({ card, selected, onSelect, disabled }: PhoneScreenCard
       transition={{ type: 'spring', stiffness: 400, damping: 25 }}
       className={`
         relative w-32 h-48 rounded-3xl border-4 pointer-events-auto
-        ${selected ? 'border-cyan-400 shadow-2xl shadow-cyan-500/50' : 'border-slate-700 hover:border-slate-500'}
+        ${selected ? 'border-cyan-400 shadow-2xl shadow-cyan-500/50 z-50' : 'border-slate-700 hover:border-slate-500'}
         ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}
       `}
     >
       <div className="absolute inset-2 bg-slate-950 rounded-2xl overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-14 h-5 bg-slate-900 rounded-b-2xl z-10" />
-
         <div className={`absolute inset-0 pt-7 pb-3 px-2 bg-gradient-to-br ${card.color} flex flex-col justify-between`}>
           <div className="text-white text-center">
             <div className="text-[10px] font-bold mb-1 opacity-80">{card.type.toUpperCase()}</div>
             <div className="text-xs font-bold leading-tight">{t(card.titleKey)}</div>
           </div>
-
           <div className="text-white text-[10px] text-center opacity-90 leading-tight">
             {t(card.descriptionKey)}
           </div>
         </div>
-
         <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-10 h-1 bg-slate-600 rounded-full" />
       </div>
     </motion.button>
