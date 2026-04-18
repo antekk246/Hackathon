@@ -44,18 +44,27 @@ func SetupRouter(authH *handler.AuthHandler, adventureH *handler.AdventureHandle
 			// Adventure routes
 			adventures := protected.Group("/adventures")
 			{
-				adventures.POST("", adventureH.StartAdventure)
-				adventures.GET("/active", adventureH.GetActiveAdventure)
-				adventures.POST("/end", adventureH.EndUsersAdventure)
+				// Zarządzanie cyklem życia przygody
+				adventures.POST("", adventureH.StartAdventure)           // Tworzy nową grę i generuje mapę
+				adventures.GET("/active", adventureH.GetActiveAdventure) // Pobiera statystyki trwającej gry
+				adventures.POST("/end", adventureH.EndUsersAdventure)    // Przerywa i usuwa obecną grę
+
+				// Mechanika poruszania się po mapie
+				adventures.GET("/room", adventureH.GetCurrentRoom)  // Pobiera pełne dane o obecnym pokoju (np. statystyki wroga)
+				adventures.POST("/advance", adventureH.AdvanceRoom) // Przesuwa gracza do kolejnego pokoju (o ile obecny został oczyszczony)
 			}
-			// Card routes
+
+			// GRUPA: Karty (Zarządzanie ekwipunkiem i ekonomią poza walką)
 			cards := protected.Group("/cards")
 			{
-				cards.GET("/", cardH.GetAllCards)                    // GET /api/v1/cards
-				cards.GET("/user", cardH.GetUserCards)               // GET /api/v1/cards/user
-				cards.GET("/adventure/:id", cardH.GetAdventureCards) // GET /api/v1/cards/adventure/1
-				cards.POST("/:id/upgrade", cardH.Upgrade)            // POST /api/v1/cards/1/upgrade
-				cards.POST("/:id/buy", cardH.BuyCard)
+				// Przeglądanie zasobów
+				cards.GET("/", cardH.GetAllCards)                    // Pobiera katalog wszystkich kart dostępnych w grze
+				cards.GET("/user", cardH.GetUserCards)               // Pobiera prywatną kolekcję kart zalogowanego gracza
+				cards.GET("/adventure/:id", cardH.GetAdventureCards) // Pobiera tylko te karty, które gracz zabrał na daną przygodę
+
+				// Akcje na konkretnych kartach (wymagają podania ID karty w adresie URL)
+				cards.POST("/:id/upgrade", cardH.Upgrade) // Ulepsza posiadaną kartę (np. za wirtualne złoto)
+				cards.POST("/:id/buy", cardH.BuyCard)     // Kupuje nową kartę i dodaje ją do kolekcji gracza
 			}
 		}
 	}
