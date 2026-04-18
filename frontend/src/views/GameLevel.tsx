@@ -94,9 +94,9 @@ export function GameLevel({ onEndTurn, onBackToMenu, onShowTutorial, difficulty 
           <span className="text-yellow-400 font-bold text-lg">{t('gameLevel.decisions', { current: decisionsLeft, max: 2 })}</span>
         </div>
 
-        {/* Progress bar */}
-        <div className="flex-1 mx-8">
-          <div className="bg-slate-900/80 px-6 py-3 rounded-full border-2 border-cyan-500/50">
+        {/* Progress bar and End Turn button container */}
+        <div className="flex-1 mx-8 flex flex-col items-center gap-3">
+          <div className="w-full bg-slate-900/80 px-6 py-3 rounded-full border-2 border-cyan-500/50">
             <div className="flex items-center gap-3">
               <span className="text-white font-bold text-sm whitespace-nowrap">{t('gameLevel.adventureProgress')}</span>
               <div className="flex-1 h-4 bg-slate-700 rounded-full overflow-hidden">
@@ -108,6 +108,14 @@ export function GameLevel({ onEndTurn, onBackToMenu, onShowTutorial, difficulty 
               <span className="text-cyan-400 font-bold text-sm">{progress}%</span>
             </div>
           </div>
+
+          {/* End Turn button */}
+          <button
+            onClick={onEndTurn}
+            className="px-12 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold rounded-full shadow-lg shadow-cyan-500/40 transition-all transform hover:scale-105 border-2 border-cyan-300/50 text-lg"
+          >
+            {t('gameLevel.endTurn')}
+          </button>
         </div>
 
         {/* Settings menu */}
@@ -121,12 +129,6 @@ export function GameLevel({ onEndTurn, onBackToMenu, onShowTutorial, difficulty 
 
           {showMenu && (
             <div className="absolute top-full right-0 mt-2 bg-slate-900 border-2 border-cyan-400 rounded-xl overflow-hidden shadow-2xl min-w-[200px]">
-              <button
-                onClick={onEndTurn}
-                className="w-full px-6 py-3 text-left text-white hover:bg-slate-800 transition-colors flex items-center gap-2"
-              >
-                <span>{t('gameLevel.endTurn')}</span>
-              </button>
               <button
                 onClick={() => {
                   onShowTutorial();

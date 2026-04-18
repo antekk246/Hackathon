@@ -12,7 +12,7 @@ interface MainMenuProps {
 }
 
 export function MainMenu({ onStartGame, onOpenShop, playerXP }: MainMenuProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   return (
@@ -90,7 +90,7 @@ export function MainMenu({ onStartGame, onOpenShop, playerXP }: MainMenuProps) {
         </div>
 
         {/* Other buttons */}
-        <div className="flex gap-4 mt-8">
+        <div className="flex gap-4 mt-8 items-center">
           <MenuButton
             icon={<ShoppingBag className="w-5 h-5" />}
             label={t('mainMenu.investInYourself')}
@@ -102,11 +102,37 @@ export function MainMenu({ onStartGame, onOpenShop, playerXP }: MainMenuProps) {
             label={t('mainMenu.securityGuide')}
             onClick={() => {}}
           />
-          <MenuButton
-            icon={<Settings className="w-5 h-5" />}
-            label={t('mainMenu.settings')}
-            onClick={() => setIsSettingsOpen(true)}
-          />
+          <div className="flex items-center gap-2">
+            <MenuButton
+              icon={<Settings className="w-5 h-5" />}
+              label={t('mainMenu.settings')}
+              onClick={() => setIsSettingsOpen(true)}
+            />
+            <div className="flex gap-2 ml-2">
+              <button
+                onClick={() => i18n.changeLanguage('pl')}
+                className={`p-2 rounded-lg border-2 transition-all hover:scale-110 ${
+                  i18n.language.startsWith('pl')
+                    ? 'border-cyan-400 bg-cyan-400/20'
+                    : 'border-slate-700 bg-slate-800/50 hover:border-slate-500'
+                }`}
+                title="Polski"
+              >
+                <span className="text-xl">🇵🇱</span>
+              </button>
+              <button
+                onClick={() => i18n.changeLanguage('en')}
+                className={`p-2 rounded-lg border-2 transition-all hover:scale-110 ${
+                  i18n.language.startsWith('en')
+                    ? 'border-cyan-400 bg-cyan-400/20'
+                    : 'border-slate-700 bg-slate-800/50 hover:border-slate-500'
+                }`}
+                title="English"
+              >
+                <span className="text-xl">🇬🇧</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Footer */}
