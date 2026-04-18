@@ -6,51 +6,36 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/oauth2"
 )
 
 type AuthHandler struct {
-	UserRepo domain.UserRepository
+	UserRepo    domain.UserRepository
+	OauthConfig *oauth2.Config
 }
 
-func NewAuthHandler(repo domain.UserRepository) *AuthHandler {
-	return &AuthHandler{UserRepo: repo}
+// 1. User hits /api/v1/auth/google/login
+func (h *AuthHandler) GoogleLogin(c *gin.Context) {
+	url := h.OauthConfig.AuthCodeURL("random_state_string")
+	c.Redirect(http.StatusTemporaryRedirect, url)
 }
 
-func (h *AuthHandler) Login(c *gin.Context) {
-	var input struct {
-		Email    string `json:"email" binding:"required,email"`
-		Password string `json:"password" binding:"required"`
-	}
+// 2. Google redirects back to /api/v1/auth/google/callback
+func (h *AuthHandler) GoogleCallback(c *gin.Context) {
+	code := c.Query("code")
 
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
-		return
-	}
-
-	// 1. Fetch user from DB
-	user, err := h.UserRepo.GetByEmail(input.Email)
+	// Exchange code for token
+	token, err := h.OauthConfig.Exchange(c, code)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Exchange failed"})
 		return
 	}
 
-	// 2. Compare the hashed password in the DB with the input password
-	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password))
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
-		return
-	}
+	// Use token to get User Info from Google API (email, name, sub)
+	// ... (fetch from https://www.googleapis.com/oauth2/v3/userinfo)
 
-	// 3. Generate the JWT!
-	token, err := jwtutil.GenerateToken(user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate token"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Login successful",
-		"token":   token,
-	})
+	// Check if user exists in DB via OAuthID; if not, create them.
+	// Finally, generate YOUR OWN JWT for your app's session.
+	appToken, _ := jwtutil.GenerateToken(dbUser.ID)
+	c.JSON(http.StatusOK, gin.H{"token": appToken})
 }

@@ -9,8 +9,14 @@ import (
 )
 
 func someFunc(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"message": "You made it to the protected area!"})
+	userID, _ := c.Get("userID")
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Welcome!",
+		"your_id": userID,
+	})
 }
+
 func HealthCheck(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "up",
@@ -26,8 +32,9 @@ func SetupRouter(authH *handler.AuthHandler) *gin.Engine {
 		//public routes
 		auth := v1.Group("/auth")
 		{
-			auth.POST("/login", authH.Login)
-			// auth.POST("/register", authH.Register)
+			// Replaces password login
+			auth.GET("/google/login", authH.GoogleLogin)
+			auth.GET("/google/callback", authH.GoogleCallback)
 		}
 
 		//protected routes

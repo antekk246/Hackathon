@@ -5,10 +5,11 @@ import (
 )
 
 type User struct {
-	ID    uint   `gorm:"primaryKey" json:"id"`
-	Email string `gorm:"uniqueIndex;not null" json:"email"`
-
-	Password string `gorm:"not null" json:"-"`
+	ID            uint   `gorm:"primaryKey" json:"id"`
+	Username      string `gorm:"uniqueIndex;not null" json:"username"`
+	Email         string `gorm:"uniqueIndex;not null" json:"email"`
+	OAuthProvider string `json:"oauth_provider"` // e.g., "google"
+	OAuthID       string `gorm:"uniqueIndex" json:"oauth_id"`
 
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`

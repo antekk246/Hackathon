@@ -2,6 +2,7 @@ package main
 
 import (
 	"backend/internal/api"
+	"backend/internal/domain"
 	"backend/internal/handler"
 	"fmt"
 	"log"
@@ -9,7 +10,8 @@ import (
 
 func main() {
 	fmt.Println("Starting API server...")
-	authHandler := handler.NewAuthHandler(nil)
+	mockRepo := &domain.MockUserRepo{}
+	authHandler := handler.NewAuthHandler(mockRepo)
 	fmt.Println("managed auth handler")
 	r := api.SetupRouter(authHandler)
 
