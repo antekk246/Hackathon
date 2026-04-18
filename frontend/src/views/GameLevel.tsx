@@ -57,10 +57,11 @@ const phoneCards: PhoneCard[] = [
 interface GameLevelProps {
   onEndTurn: () => void;
   onBackToMenu: () => void;
+  onShowTutorial: () => void;
   difficulty: 'easy' | 'medium' | 'hard';
 }
 
-export function GameLevel({ onEndTurn, onBackToMenu, difficulty }: GameLevelProps) {
+export function GameLevel({ onEndTurn, onBackToMenu, onShowTutorial, difficulty }: GameLevelProps) {
   const [playerHealth, setPlayerHealth] = useState(80);
   const [playerMaxHealth] = useState(100);
   const [decisionsLeft, setDecisionsLeft] = useState(2);
@@ -123,7 +124,10 @@ export function GameLevel({ onEndTurn, onBackToMenu, difficulty }: GameLevelProp
                 <span>End Turn</span>
               </button>
               <button
-                onClick={() => {}}
+                onClick={() => {
+                  onShowTutorial();
+                  setShowMenu(false);
+                }}
                 className="w-full px-6 py-3 text-left text-white hover:bg-slate-800 transition-colors flex items-center gap-2"
               >
                 <HelpCircle className="w-5 h-5" />
