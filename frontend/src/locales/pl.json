@@ -33,7 +33,16 @@
     "phishingScammer": "Oszust Phishingowy",
     "phishingQuote": "Kliknij tutaj, aby odebrać nagrodę!",
     "nextAttack": "Następny: Atak {{damage}}",
-    "chooseDefense": "Wybierz akcje obronne (zostało {{count}} decyzji)"
+    "chooseDefense": "Wybierz akcje obronne (zostało {{count}} decyzji)",
+    "linkGoblin": "Goblin Linkowy",
+  "scamTornado": "Tornado Wyłudzeń",
+  "systemFailure": "SYSTEM AWARIA",
+  "neutralized": "ZNEUTRALIZOWANY",
+  "debug": {
+    "animationTest": "Test animacji",
+    "hitPlayer": "Traf gracza (-20 HP)",
+    "hitEnemy": "Atakuj wroga (-25 HP)"
+  }
   },
   "settings": {
     "title": "Ustawienia",
