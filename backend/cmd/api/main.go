@@ -66,9 +66,11 @@ func main() {
 	}
 
 	userRepo := domain.NewUserRepository(db)
+	adventureRepo := domain.NewAdventureRepository(db)
 	authHandler := handler.NewAuthHandler(userRepo, oauthConf)
+	adventureHandler := handler.NewAdventureHandler(adventureRepo)
 
-	r := api.SetupRouter(authHandler)
+	r := api.SetupRouter(authHandler, adventureHandler)
 
 	log.Println("Server starting on :8080...")
 	if err := r.Run(":8080"); err != nil {
