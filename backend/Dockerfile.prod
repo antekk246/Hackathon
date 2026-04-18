@@ -1,0 +1,43 @@
+# ==========================================
+# ETAP 1: BUDOWANIE (Tzw. Builder)
+# Używamy ciężkiego obrazu z pełnym Go (waży ok 1 GB)
+# ==========================================
+FROM golang:1.25-alpine AS builder
+
+# Instalujemy git (wymagany do pobrania niektórych bibliotek)
+RUN apk add --no-cache git
+
+# Ustawiamy folder roboczy. Zauważ, że serwer już "jest" wewnątrz folderu backend!
+WORKDIR /app
+
+# Najpierw kopiujemy tylko pliki konfiguracyjne paczek i je pobieramy.
+# Robimy to najpierw, żeby Docker mógł skeszować ten krok i nie pobierać paczek co chwilę.
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Teraz kopiujemy cały pozostały kod (czyli resztę zawartości folderu backend)
+COPY . .
+
+# Magia: Kompilujemy kod. 
+# Powstaje jeden, mały, samowystarczalny plik wykonywalny o nazwie "main".
+RUN CGO_ENABLED=0 GOOS=linux go build -o main ./main.go
+
+# ==========================================
+# ETAP 2: PRODUKCJA (Tzw. Runner)
+# Używamy najlżejszego systemu na świecie (Alpine Linux, waży ok. 5 MB)
+# ==========================================
+FROM alpine:latest
+
+# Dodajemy certyfikaty bezpieczeństwa, żeby Go potrafiło połączyć się z bezpieczną bazą Neon (https)
+RUN apk --no-cache add ca-certificates
+
+WORKDIR /root/
+
+# Skopiowanie z Etapu 1: Bierzemy TYLKO skompilowany plik "main" z ciężkiego obrazu "builder"
+COPY --from=builder /app/main .
+
+# Otwieramy port 8080 dla serwera chmurowego
+EXPOSE 8080
+
+# Uruchamiamy aplikację
+CMD ["./main"]
