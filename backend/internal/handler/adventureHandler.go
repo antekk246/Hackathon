@@ -87,7 +87,7 @@ func (h *AdventureHandler) StartAdventure(c *gin.Context) {
 		// Force delete
 		if err := h.Repo.DeleteByUserID(userID); err != nil {
 			// INCLUDE THE ERROR HERE:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reset adventure: " + err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reset adventure: "})
 			return
 		}
 	}
@@ -110,7 +110,7 @@ func (h *AdventureHandler) StartAdventure(c *gin.Context) {
 
 	if err := h.Repo.Create(&newAdventure); err != nil {
 		// INCLUDE THE ERROR HERE:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start adventure: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start adventure: "})
 		return
 	}
 

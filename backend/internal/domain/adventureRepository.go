@@ -47,7 +47,7 @@ func (r *gormAdventureRepo) Create(adventure *models.Adventure) error {
 	roomCount := 5 * adventure.Level
 
 	return r.DB.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Create(adventure).Error; err != nil {
+		if err := tx.Omit("Cards").Create(adventure).Error; err != nil {
 			return err
 		}
 
