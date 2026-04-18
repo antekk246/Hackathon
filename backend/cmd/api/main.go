@@ -33,7 +33,7 @@ func main() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	err = db.AutoMigrate(&models.User{})
+	db.AutoMigrate(&models.CardType{}, &models.Card{}, &models.User{})
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}

@@ -12,4 +12,5 @@ type User struct {
 
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
+	Cards     []Card    `gorm:"many2many:user_cards;" json:"cards"`
 }
