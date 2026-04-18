@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  # Twój zaktualizowany Frontend
+  frontend:
+    build: ./frontend  # Zmieniliśmy ścieżkę na folder frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app # Zmieniliśmy mapowanie
+      - /app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    depends_on:
+      - backend # Frontend uruchomi się dopiero, gdy wstanie backend
+
+  # Serwer Go Twojego kolegi
+  backend:
+    build: ./backend
+    ports:
+      - "8080:8080" # Tu wpiszcie port, na którym nasłuchuje aplikacja w Go
+    # Jeśli backend z Go potrzebuje zmiennych środowiskowych do bazy, wrzućcie je tutaj:
+    # environment:
+    #   - DB_HOST=db
+    #   - DB_USER=admin
+
+  # Baza danych (jeśli kolega używa tej samej z PostgreSQL, którą postawiliśmy wcześniej)
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secretpassword
+      POSTGRES_DB: roguelike
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
