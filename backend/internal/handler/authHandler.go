@@ -60,16 +60,26 @@ func (h *AuthHandler) GoogleCallback(c *gin.Context) {
 	user, err := h.UserRepo.GetByOAuthID(googleUser.Sub)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			// Only create if they actually don't exist
-			user = &models.User{ /* ... */ }
-			h.UserRepo.Create(user)
+
+			user = &models.User{
+				Username: googleUser.Name,
+				Email:    googleUser.Email,
+				OAuthID:  googleUser.Sub, // <-- TO ZAPOBIEGA BŁĘDOWI DUPLIKATU (ustawia unikalne ID zamiast pustego stringa "")
+				Money:    100,            // (Opcjonalnie) Możesz dać graczowi trochę złota na start!
+			}
+
+			// Zapisujemy do bazy i sprawdzamy, czy zapis się powiódł
+			if err := h.UserRepo.Create(user); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Nie udało się utworzyć konta użytkownika"})
+				return
+			}
+
 		} else {
-			// If it's a real DB error (like connection lost), don't try to create a user
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+			// Jeśli to prawdziwy błąd bazy (np. zerwane połączenie)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Błąd bazy danych"})
 			return
 		}
 	}
-
 	// Generujemy Wasz token JWT
 	appToken, err := jwtutil.GenerateToken(user.ID)
 	if err != nil {
