@@ -8,7 +8,7 @@ import { CardSelection } from './views/CardSelection';
 import { gameApi } from './api/gameApi';
 
 export default function App() {
-  const [gameState, setGameState] = useState<'menu' | 'game' | 'shop' | 'selection'>('menu');
+  const [gameState, setGameState] = useState<'menu' | 'game' | 'shop' | 'selection'>('game');
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('easy');
   const [showTutorial, setShowTutorial] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(0);

@@ -18,18 +18,6 @@ export const gameApi = {
         window.location.href = `https://hackathon-e7kx.onrender.com/api/v1/auth/google/login`;
     },
 
-    devLogin: async (): Promise<void> => {
-        try {
-            const response = await fetch(`${BASE_URL}/auth/dev/login`);
-            if (!response.ok) throw new Error('Dev login failed');
-            const data = await response.json();
-            localStorage.setItem('token', data.token);
-            window.location.reload();
-        } catch (error) {
-            console.error('Dev login error:', error);
-        }
-    },
-
     // CARDS
     getAllCards: async (): Promise<Card[]> => {
         const response = await fetch(`${BASE_URL}/cards/`, { headers: getHeaders() });
@@ -103,5 +91,25 @@ export const gameApi = {
         });
         if (!response.ok) throw new Error('Błąd przejścia do kolejnego pokoju');
         return response.json();
+    },
+
+    // BATTLE - Logika walki (endpoint do zaimplementowania na backendzie)
+    playCard: async (cardId: number): Promise<{ playerHealth: number; enemyHealth: number; damage: number; message?: string }> => {
+        // TODO: Połączyć z rzeczywistym endpointem backendu
+        // POST /api/v1/adventures/fight/play-card
+        // Request: { cardId: number }
+        // Response: { playerHealth: number, enemyHealth: number, damage: number, reward?: { xp: number } }
+        
+        // Na razie: mock response
+        return new Promise(resolve => {
+            setTimeout(() => {
+                resolve({
+                    playerHealth: 80,
+                    enemyHealth: 45,
+                    damage: Math.floor(Math.random() * 20) + 10,
+                    message: 'Card played successfully'
+                });
+            }, 300);
+        });
     },
 };

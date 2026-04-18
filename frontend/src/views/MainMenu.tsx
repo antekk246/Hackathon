@@ -92,19 +92,12 @@ export function MainMenu({ onStartGame, onOpenShop, playerXP }: MainMenuProps) {
         {/* Other buttons */}
         <div className="flex gap-4 mt-8 items-center">
           {!isLoggedIn ? (
-            <>
-              <MenuButton
-                icon={<LogIn className="w-5 h-5" />}
-                label="Login with Google"
-                onClick={() => gameApi.loginWithGoogle()}
-                highlight
-              />
-              <MenuButton
-                icon={<LogIn className="w-5 h-5" />}
-                label="Dev Login"
-                onClick={() => gameApi.devLogin()}
-              />
-            </>
+            <MenuButton
+              icon={<LogIn className="w-5 h-5" />}
+              label="Login with Google"
+              onClick={() => gameApi.loginWithGoogle()}
+              highlight
+            />
           ) : (
             <MenuButton
               icon={<ShoppingBag className="w-5 h-5" />}
