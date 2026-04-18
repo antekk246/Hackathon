@@ -1,0 +1,130 @@
+{
+  "mainMenu": {
+    "title": "PKO XP: Gaming",
+    "subtitle": "Defend Against Digital Threats",
+    "yourXP": "Your XP: {{xp}}",
+    "description": "Learn to spot scams, fake payments, and online dangers",
+    "chooseAdventure": "Choose Adventure",
+    "easy": {
+      "label": "Easy",
+      "description": "Learn the basics"
+    },
+    "medium": {
+      "label": "Medium",
+      "description": "Test your skills"
+    },
+    "hard": {
+      "label": "Hard",
+      "description": "Expert challenge"
+    },
+    "investInYourself": "Invest in Yourself",
+    "securityGuide": "Security Guide",
+    "settings": "Settings",
+    "footer": "Stay safe online • Know the threats • Protect yourself"
+  },
+  "gameLevel": {
+    "decisions": "Decisions: {{current}}/{{max}}",
+    "adventureProgress": "Adventure Progress",
+    "endTurn": "End Turn",
+    "guide": "Guide",
+    "backToMenu": "Back to Menu",
+    "you": "You",
+    "scammer": "Scammer",
+    "phishingScammer": "Phishing Scammer",
+    "phishingQuote": "Click here to claim your prize!",
+    "nextAttack": "Next: Attack {{damage}}",
+    "chooseDefense": "Choose your defense actions ({{count}} decisions left)"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "close": "Close",
+    "english": "English",
+    "polish": "Polish"
+  },
+  "cards": {
+    "blockSender": {
+      "title": "Block Sender",
+      "description": "Block suspicious contact"
+    },
+    "reportScam": {
+      "title": "Report Scam",
+      "description": "Report to authorities"
+    },
+    "verifySource": {
+      "title": "Verify Source",
+      "description": "Check if legitimate"
+    },
+    "deleteIgnore": {
+      "title": "Delete & Ignore",
+      "description": "Remove without engaging"
+    },
+    "twoFAShield": {
+      "title": "2FA Shield",
+      "description": "Enable authentication"
+    },
+    "strongPassword": {
+      "title": "Strong Password",
+      "description": "Create secure password"
+    },
+    "vpnShield": {
+      "title": "VPN Shield",
+      "description": "Protect your connection"
+    },
+    "evidenceCollect": {
+      "title": "Evidence Collect",
+      "description": "Gather scam evidence"
+    }
+  },
+  "shop": {
+    "title": "Invest in Yourself",
+    "back": "Back",
+    "yourCards": "Your Cards",
+    "unlockNewCards": "Unlock New Cards",
+    "type": "Type",
+    "description": "Description",
+    "currentLevel": "Current Level",
+    "level": "Level {{level}}",
+    "upgrade": "Upgrade ({{cost}} XP)",
+    "unlock": "Unlock ({{cost}} XP)"
+  },
+  "tutorial": {
+    "stepCounter": "Step {{current}} of {{total}}",
+    "next": "Next",
+    "start": "Start Game!",
+    "steps": [
+      {
+        "title": "Welcome to PKO XP: Gaming!",
+        "description": "I'm your guide. I'll teach you how to defend against digital threats!"
+      },
+      {
+        "title": "Your Character",
+        "description": "This is you! You're a cyber defender protecting people from online scams."
+      },
+      {
+        "title": "The Threat",
+        "description": "These are the scammers and digital threats you need to defeat!"
+      },
+      {
+        "title": "Health Bars",
+        "description": "Keep your health up! If it reaches zero, you lose. Defeat enemies by reducing their health."
+      },
+      {
+        "title": "Decision Cards",
+        "description": "These phone screens are your actions. You can play 2 cards per turn to defend yourself!"
+      },
+      {
+        "title": "Adventure Progress",
+        "description": "Track your progress through the adventure. Complete all encounters to win XP!"
+      },
+      {
+        "title": "Earn XP!",
+        "description": "Win adventures to earn XP! Use XP to unlock and upgrade cards in \"Invest in Yourself\"."
+      },
+      {
+        "title": "Ready to Start!",
+        "description": "Use your cards wisely to identify and stop digital threats. Good luck!"
+      }
+    ]
+  }
+}
