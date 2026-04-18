@@ -6,7 +6,6 @@ import (
 	"backend/pkg/jwtutil"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"os"
 
@@ -102,21 +101,32 @@ func (h *AuthHandler) GoogleCallback(c *gin.Context) {
 	c.Redirect(http.StatusTemporaryRedirect, redirectURL)
 }
 func (h *AuthHandler) GetMe(c *gin.Context) {
-	// 1. Pobierz ID z middleware (ustawione np. jako "userID")
-	userID, exists := c.Get("userID")
+	// 1. Pobierz ID z kontekstu (ustawione przez middleware JWT)
+	val, exists := c.Get("userID")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Nieautoryzowany"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Brak autoryzacji - zaloguj się ponownie"})
 		return
 	}
 
-	user, err := h.UserRepo.GetByOAuthID(fmt.Sprintf("%v", userID)) // Lub GetByID jeśli masz takie repo
-	// Jeśli nie masz GetByID, najbezpieczniej pobrać go po ID zapisanym w tokenie
+	// 2. Rzutowanie typu - middleware zazwyczaj przechowuje to jako uint lub float64 (z JSON)
+	var userID uint
+	switch v := val.(type) {
+	case uint:
+		userID = v
+	case float64:
+		userID = uint(v)
+	default:
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Błędny format ID użytkownika"})
+		return
+	}
 
-	// Uproszczony przykład (zakładając, że masz dostęp do DB bezpośrednio lub przez metodę repo)
+	// 3. Pobierz użytkownika korzystając z nowej metody Repo
+	user, err := h.UserRepo.GetByID(userID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Użytkownik nie istnieje"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Użytkownik nie istnieje w bazie danych"})
 		return
 	}
 
+	// 4. Sukces! Zwracamy obiekt użytkownika (Frontend dostanie Money i Cards)
 	c.JSON(http.StatusOK, user)
 }

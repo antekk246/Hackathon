@@ -13,6 +13,7 @@ type UserRepository interface {
 	GetByOAuthID(oauthID string) (*models.User, error)
 	Create(user *models.User) error
 	BuyCard(userID uint, cardID uint) error
+	GetByID(id uint) (*models.User, error)
 }
 
 type gormUserRepo struct {
@@ -89,4 +90,16 @@ func (r *gormUserRepo) Create(user *models.User) error {
 
 		return nil
 	})
+}
+
+func (r *gormUserRepo) GetByID(id uint) (*models.User, error) {
+	var user models.User
+	// Preloadujemy karty i przygodę, aby /me zwracało pełny stan gracza
+	err := r.DB.Preload("Cards").
+		Preload("Adventure").
+		First(&user, id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
 }

@@ -16,7 +16,7 @@ export default function App() {
   const [showTutorial, setShowTutorial] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(0);
   const [hasSeenTutorial, setHasSeenTutorial] = useState(false);
-  const [playerXP, setPlayerXP] = useState(500);
+  const [playerXP, setPlayerXP] = useState(1);
   const [userCards, setUserCards] = useState<Card[]>([]);
   
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
