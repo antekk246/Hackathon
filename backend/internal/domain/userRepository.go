@@ -6,24 +6,37 @@ import (
 	"gorm.io/gorm"
 )
 
-// The Interface (The contract)
 type UserRepository interface {
 	GetByEmail(email string) (*models.User, error)
+	GetByOAuthID(oauthID string) (*models.User, error)
+	Create(user *models.User) error
 }
 
-// The Implementation
-type postgresUserRepo struct {
+type gormUserRepo struct {
 	DB *gorm.DB
 }
 
+// Ta funkcja jest KLUCZOWA - używasz jej w main.go
 func NewUserRepository(db *gorm.DB) UserRepository {
-	return &postgresUserRepo{DB: db}
+	return &gormUserRepo{DB: db}
 }
 
-func (r *postgresUserRepo) GetByEmail(email string) (*models.User, error) {
+func (r *gormUserRepo) GetByEmail(email string) (*models.User, error) {
 	var user models.User
 	if err := r.DB.Where("email = ?", email).First(&user).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil
+}
+
+func (r *gormUserRepo) GetByOAuthID(oauthID string) (*models.User, error) {
+	var user models.User
+	if err := r.DB.Where("o_auth_id = ?", oauthID).First(&user).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (r *gormUserRepo) Create(user *models.User) error {
+	return r.DB.Create(user).Error
 }

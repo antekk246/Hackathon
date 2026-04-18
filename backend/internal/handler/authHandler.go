@@ -2,7 +2,9 @@ package handler
 
 import (
 	"backend/internal/domain"
+	"backend/internal/models"
 	"backend/pkg/jwtutil"
+	"encoding/json"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -14,28 +16,69 @@ type AuthHandler struct {
 	OauthConfig *oauth2.Config
 }
 
-// 1. User hits /api/v1/auth/google/login
+func NewAuthHandler(repo domain.UserRepository, config *oauth2.Config) *AuthHandler {
+	return &AuthHandler{
+		UserRepo:    repo,
+		OauthConfig: config,
+	}
+}
+
+// User hits /api/v1/auth/google/login
 func (h *AuthHandler) GoogleLogin(c *gin.Context) {
 	url := h.OauthConfig.AuthCodeURL("random_state_string")
 	c.Redirect(http.StatusTemporaryRedirect, url)
 }
-
-// 2. Google redirects back to /api/v1/auth/google/callback
 func (h *AuthHandler) GoogleCallback(c *gin.Context) {
 	code := c.Query("code")
-
-	// Exchange code for token
 	token, err := h.OauthConfig.Exchange(c, code)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Exchange failed"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Błąd wymiany kodu"})
 		return
 	}
 
-	// Use token to get User Info from Google API (email, name, sub)
-	// ... (fetch from https://www.googleapis.com/oauth2/v3/userinfo)
+	// user data fetch
+	client := h.OauthConfig.Client(c, token)
+	resp, err := client.Get("https://www.googleapis.com/oauth2/v3/userinfo")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Błąd pobierania danych użytkownika"})
+		return
+	}
+	defer resp.Body.Close()
 
-	// Check if user exists in DB via OAuthID; if not, create them.
-	// Finally, generate YOUR OWN JWT for your app's session.
-	appToken, _ := jwtutil.GenerateToken(dbUser.ID)
-	c.JSON(http.StatusOK, gin.H{"token": appToken})
+	var googleUser struct {
+		Sub   string `json:"sub"`
+		Email string `json:"email"`
+		Name  string `json:"name"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&googleUser); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Błąd dekodowania danych użytkownika"})
+		return
+	}
+
+	user, err := h.UserRepo.GetByOAuthID(googleUser.Sub)
+	if err != nil {
+		// Zakładamy, że błąd oznacza brak usera (RecordNotFound)
+		user = &models.User{
+			Email:    googleUser.Email,
+			OAuthID:  googleUser.Sub,
+			Username: googleUser.Name,
+		}
+
+		if err := h.UserRepo.Create(user); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+			return
+		}
+	}
+
+	// Generujemy Wasz token JWT
+	appToken, err := jwtutil.GenerateToken(user.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Token generation failed"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"token": appToken,
+		"user":  user,
+	})
 }
