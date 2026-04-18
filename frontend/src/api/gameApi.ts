@@ -18,6 +18,18 @@ export const gameApi = {
         window.location.href = `https://hackathon-e7kx.onrender.com/api/v1/auth/google/login`;
     },
 
+    devLogin: async (): Promise<void> => {
+        try {
+            const response = await fetch(`${BASE_URL}/auth/dev/login`);
+            if (!response.ok) throw new Error('Dev login failed');
+            const data = await response.json();
+            localStorage.setItem('token', data.token);
+            window.location.reload();
+        } catch (error) {
+            console.error('Dev login error:', error);
+        }
+    },
+
     // CARDS
     getAllCards: async (): Promise<Card[]> => {
         const response = await fetch(`${BASE_URL}/cards/`, { headers: getHeaders() });
