@@ -27,11 +27,12 @@ interface BackendCard {
 }
 
 interface BattleStats {
-  player_hp: number;
-  enemy_hp: number;
-  enemy_max_hp: number;
-  mana: number;
-  player_turn: boolean;
+    player_hp: number;
+    player_shield: number; // <--- DODANE
+    enemy_hp: number;
+    enemy_max_hp: number;
+    mana: number;
+    player_turn: boolean;
 }
 
 export function GameLevel({ onBackToMenu }: { onBackToMenu: () => void }) {
@@ -173,13 +174,14 @@ const handleEndTurn = async () => {
 
       {/* 2. Battle Stage */}
       <div className="absolute inset-0 flex items-center justify-around pb-64 px-10">
-        <Entity 
-          img={img} 
-          hp={stats.player_hp} 
-          maxHp={900} // Backend base
-          label="USER_INTEGRITY" 
-          isAttacking={isPlayerAttacking} 
-          color="cyan" 
+        <Entity
+            img={img}
+            hp={stats.player_hp}
+            shield={stats.player_shield} // <--- DODANE
+            maxHp={900}
+            label="USER_INTEGRITY"
+            isAttacking={isPlayerAttacking}
+            color="cyan"
         />
 
         <div className="flex flex-col gap-4 z-50">
@@ -250,30 +252,41 @@ const handleEndTurn = async () => {
 
 // --- Dynamic Sub-components ---
 
-function Entity({ img, hp, maxHp, label, isAttacking, color }: any) {
-  const percent = Math.max(0, (hp / maxHp) * 100);
-  return (
-    <div className="flex flex-col items-center gap-6">
-      <motion.div 
-        animate={isAttacking ? { x: color === 'cyan' ? 80 : -80, scale: 1.1 } : { x: 0, scale: 1 }}
-        className={`w-56 h-72 rounded-3xl border-4 ${color === 'cyan' ? 'border-cyan-500/30' : 'border-red-500/30'} bg-slate-900 shadow-2xl relative`}
-      >
-        <img src={img} className={`w-full h-full object-contain p-6 ${hp <= 0 ? 'grayscale blur-sm' : ''}`} alt={label} />
-      </motion.div>
-      <div className="w-64">
-        <div className="flex justify-between text-[10px] font-black text-slate-400 mb-1 tracking-tighter">
-          <span>{label}</span>
-          <span>{hp} HP</span>
+function Entity({ img, hp, maxHp, shield = 0, label, isAttacking, color }: any) {
+    const percent = Math.max(0, (hp / maxHp) * 100);
+
+    return (
+        <div className="flex flex-col items-center gap-6">
+            <motion.div
+                animate={isAttacking ? { x: color === 'cyan' ? 80 : -80, scale: 1.1 } : { x: 0, scale: 1 }}
+                className={`w-56 h-72 rounded-3xl border-4 ${color === 'cyan' ? 'border-cyan-500/30' : 'border-red-500/30'} bg-slate-900 shadow-2xl relative`}
+            >
+                <img src={img} className={`w-full h-full object-contain p-6 ${hp <= 0 ? 'grayscale blur-sm' : ''}`} alt={label} />
+
+                {/* DODANE: Wizualizacja Tarczy na portrecie */}
+                {shield > 0 && (
+                    <div className="absolute inset-0 border-8 border-blue-400/80 rounded-2xl animate-pulse pointer-events-none shadow-[inset_0_0_20px_rgba(96,165,250,0.8)]" />
+                )}
+            </motion.div>
+
+            <div className="w-64">
+                <div className="flex justify-between items-center text-[10px] font-black text-slate-400 mb-1 tracking-tighter">
+                    <span>{label}</span>
+                    <div className="flex items-center gap-2">
+                        {/* DODANE: Wartość tarczy nad paskiem HP */}
+                        {shield > 0 && <span className="text-blue-400 flex items-center gap-1"><Shield size={10} /> {shield}</span>}
+                        <span className={hp <= 0 ? 'text-red-500' : ''}>{hp} HP</span>
+                    </div>
+                </div>
+                <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden relative">
+                    <motion.div
+                        animate={{ width: `${percent}%` }}
+                        className={`h-full ${color === 'cyan' ? 'bg-cyan-500' : 'bg-red-500'}`}
+                    />
+                </div>
+            </div>
         </div>
-        <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-          <motion.div 
-            animate={{ width: `${percent}%` }}
-            className={`h-full ${color === 'cyan' ? 'bg-cyan-500' : 'bg-red-500'}`} 
-          />
-        </div>
-      </div>
-    </div>
-  );
+    );
 }
 
 function CardInstance({ card, index, total, isSelected, onSelect }: any) {

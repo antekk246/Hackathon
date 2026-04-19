@@ -286,11 +286,12 @@ func (h *AdventureHandler) GetFullBattleState(c *gin.Context) {
 			"draw":      mapIDsToCards(deckIDs, cardMap),
 			"discard":   mapIDsToCards(usedIDs, cardMap),
 			"stats": gin.H{
-				"player_hp":    room.Fight.CurrentPlayerHealth,
-				"enemy_hp":     room.Fight.CurrentEnemyHealth,
-				"enemy_max_hp": room.Fight.MaxEnemyHealth,
-				"mana":         room.Fight.DecisionPoints,
-				"player_turn":  room.Fight.PlayerTurn,
+				"player_hp":     room.Fight.CurrentPlayerHealth,
+				"player_shield": room.Fight.CurrentPlayerShield, // <--- TUTAJ JEST BRAKUJĄCA LINIA!
+				"enemy_hp":      room.Fight.CurrentEnemyHealth,
+				"enemy_max_hp":  room.Fight.MaxEnemyHealth,
+				"mana":          room.Fight.DecisionPoints,
+				"player_turn":   room.Fight.PlayerTurn,
 			},
 		})
 		return
