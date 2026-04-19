@@ -57,7 +57,6 @@ func main() {
 		&models.Reward{},
 		&models.Buff{},
 		&models.Encounter{},
-		&models.AdventureCard{},
 	)
 	if err != nil {
 		log.Fatalf("Błąd podczas czyszczenia bazy: %v", err)
