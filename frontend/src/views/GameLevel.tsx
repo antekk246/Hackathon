@@ -102,20 +102,51 @@ export function GameLevel({ onBackToMenu }: { onBackToMenu: () => void }) {
     }
   };
 
-  // --- Action: End Turn ---
-  const handleEndTurn = async () => {
-    try {
-      const response = await fetch('/api/v1/adventures/end-turn', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
-      if (response.ok) {
-        await fetchBattleState();
-      }
-    } catch (err) {
-      console.error("End turn failed");
+  const handleStartTurn = async () => {
+  try {
+    const response = await fetch('/api/v1/adventures/start-turn', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    
+    if (response.ok) {
+      await fetchBattleState(); 
     }
-  };
+  } catch (err) {
+    console.error("Start turn failed", err);
+  }
+};
+
+// --- Action: End Turn (The Orchestrator) ---
+const handleEndTurn = async () => {
+  if (!stats?.player_turn || loading) return;
+
+  setLoading(true); // Prevent double-clicking
+  try {
+    const response = await fetch('/api/v1/adventures/end-turn', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+
+    if (response.ok) {
+      // 1. Show enemy attack animation
+      setIsEnemyAttacking(true);
+      
+      // 2. Local Delay: Let the player feel the hit
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      setIsEnemyAttacking(false);
+      
+      // 3. Chain to Start Turn
+      // This is better than useEffect because it's an explicit sequence
+      await handleStartTurn();
+    }
+  } catch (err) {
+    console.error("End turn failed", err);
+  } finally {
+    setLoading(false);
+  }
+};
 
   if (loading || !stats) return <div className="size-full bg-slate-950 flex items-center justify-center font-mono text-cyan-500 animate-pulse">SYNCHRONIZING_WITH_VAULT...</div>;
 
