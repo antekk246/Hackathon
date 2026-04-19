@@ -6,8 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -402,31 +404,58 @@ func (h *AdventureHandler) moveCardToDiscard(fight *models.Fight, cardID uint) {
 	fight.UsedCards, _ = json.Marshal(discard)
 }
 func (h *AdventureHandler) handleDraw(fight *models.Fight, count int) {
-	var hand []uint
-	var deck []uint
+	var hand, deck, discard []uint
 	json.Unmarshal(fight.Cards, &hand)
 	json.Unmarshal(fight.CardsInDeck, &deck)
+	json.Unmarshal(fight.UsedCards, &discard)
 
 	for i := 0; i < count; i++ {
 		if len(deck) == 0 {
-			// reshuffle discard into deck if deck is empty
-			var discard []uint
-			json.Unmarshal(fight.UsedCards, &discard)
-			deck = discard
-			hand = hand[:0] // clear hand
+			if len(discard) == 0 {
+				break // No cards left anywhere
+			}
 
-			// Clear discard pile
-			fight.UsedCards, _ = json.Marshal([]uint{})
-			break
+			//Copy discard to deck and reset discard
+			deck = make([]uint, len(discard))
+			copy(deck, discard)
+			discard = []uint{}
+
+			// Shuffle the new deck
+			rand.Seed(time.Now().UnixNano())
+			rand.Shuffle(len(deck), func(i, j int) {
+				deck[i], deck[j] = deck[j], deck[i]
+			})
 		}
-		// Take from top of deck
-		cardToDraw := deck[0]
-		deck = deck[1:]
-		hand = append(hand, cardToDraw)
+
+		// Draw the top card
+		if len(deck) > 0 {
+			cardToDraw := deck[0]
+			deck = deck[1:]
+			hand = append(hand, cardToDraw)
+		}
 	}
 
 	fight.Cards, _ = json.Marshal(hand)
 	fight.CardsInDeck, _ = json.Marshal(deck)
+	fight.UsedCards, _ = json.Marshal(discard)
+}
+
+// StartTurn - POST /api/v1/adventures/start-turn
+func (h *AdventureHandler) StartTurn(c *gin.Context) {
+	userID := c.MustGet("userID").(uint)
+	adv, _ := h.Repo.GetByUserID(userID)
+	room, _ := h.RoomRepo.GetRoomWithDetails(adv.CurrentRoomID)
+	fight := room.Fight
+
+	//Reset Resources
+	fight.DecisionPoints = 2
+	fight.PlayerTurn = true
+
+	//Draw 4 cards (automatically shuffles if needed)
+	h.handleDraw(fight, 4)
+
+	h.RoomRepo.UpdateFight(fight)
+	c.JSON(http.StatusOK, gin.H{"message": "Turn started, cards drawn"})
 }
 
 // EndTurn - POST /api/v1/adventures/end-turn
@@ -434,27 +463,32 @@ func (h *AdventureHandler) EndTurn(c *gin.Context) {
 	userID := c.MustGet("userID").(uint)
 	adv, _ := h.Repo.GetByUserID(userID)
 	room, _ := h.RoomRepo.GetRoomWithDetails(adv.CurrentRoomID)
+	fight := room.Fight
 
-	// put all cards from hand to discard
-	var hand []uint
-	json.Unmarshal(room.Fight.Cards, &hand)
+	// 1. Discard current hand
+	var hand, discard []uint
+	json.Unmarshal(fight.Cards, &hand)
+	json.Unmarshal(fight.UsedCards, &discard)
 
-	for _, cardID := range hand {
-		h.moveCardToDiscard(room.Fight, cardID)
+	discard = append(discard, hand...)
+	fight.UsedCards, _ = json.Marshal(discard)
+	fight.Cards, _ = json.Marshal([]uint{}) // UI sees empty hand
+
+	// 2. Enemy Attack: Deal 100 Damage
+	if fight.CurrentPlayerHealth > 100 {
+		fight.CurrentPlayerHealth -= 100
+	} else {
+		fight.CurrentPlayerHealth = 0
 	}
 
-	// todo handleEnemyTunrn
+	// 3. End Player Turn
+	fight.PlayerTurn = false
 
-	// draw new hand of 4 cards
-	// todo move to start turn logic
-	h.handleDraw(room.Fight, 4)
-
-	// Reset points to 2 for the next turn and flip turn (or trigger enemy AI here)
-	room.Fight.DecisionPoints = 2
-	room.Fight.PlayerTurn = true // In a real game, you'd set this to false and run enemy logic first
-
-	h.RoomRepo.UpdateFight(room.Fight)
-	c.JSON(http.StatusOK, gin.H{"message": "Turn ended, actions reset"})
+	h.RoomRepo.UpdateFight(fight)
+	c.JSON(http.StatusOK, gin.H{
+		"message":   "Enemy dealt 100 damage",
+		"player_hp": fight.CurrentPlayerHealth,
+	})
 }
 func mapIDsToCards(ids []uint, cardMap map[uint]models.Card) []models.Card {
 	result := make([]models.Card, 0, len(ids))
