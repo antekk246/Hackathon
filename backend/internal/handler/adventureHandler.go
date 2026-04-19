@@ -96,9 +96,14 @@ func (h *AdventureHandler) StartAdventure(c *gin.Context) {
 
 	// 4. Create the Adventure
 	// We map the IDs into the model slice. GORM uses the IDs to link existing cards.
-	cards := make([]models.Card, len(req.CardIDs))
-	for i, id := range req.CardIDs {
-		cards[i] = models.Card{ID: id}
+	//cards := make([]models.Card, len(req.CardIDs))
+	//for i, id := range req.CardIDs {
+	//	cards[i] = models.Card{ID: id}
+	//}
+	cards, err := h.CardRepo.GetByIDs(req.CardIDs)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch cards: " + err.Error()})
+		return
 	}
 
 	newAdventure := models.Adventure{
