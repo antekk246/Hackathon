@@ -2,10 +2,9 @@ package domain
 
 import (
 	"backend/internal/models"
-	"fmt"
+	"errors"
 
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 type UserRepository interface {
@@ -40,34 +39,36 @@ func (r *gormUserRepo) GetByOAuthID(oauthID string) (*models.User, error) {
 	}
 	return &user, nil
 }
-func (r *UserRepository) BuyCard(userID uint, cardID uint) error {
-    return r.db.Transaction(func(tx *gorm.DB) error {
-        var user models.User
-        var card models.Card
+func (r *gormUserRepo) BuyCard(userID uint, cardID uint) error {
+	return r.DB.Transaction(func(tx *gorm.DB) error {
+		var user models.User
+		var card models.Card
 
-        // 1. Pobierz usera i kartę z bazy
-        if err := tx.First(&user, userID).Error; err != nil {
-            return err
-        }
-        if err := tx.First(&card, cardID).Error; err != nil {
-            return err
-        }
+		// 1. Pobierz usera i kartę z bazy
+		if err := tx.First(&user, userID).Error; err != nil {
+			return err
+		}
+		if err := tx.First(&card, cardID).Error; err != nil {
+			return err
+		}
 
-        // 2. Cena (możesz użyć UpgradeCost z karty jako ceny zakupu)
-        cost := uint(100) 
-        if card.UpgradeCost > 0 { cost = card.UpgradeCost }
+		// 2. Cena (możesz użyć UpgradeCost z karty jako ceny zakupu)
+		cost := uint(100)
+		if card.UpgradeCost > 0 {
+			cost = card.UpgradeCost
+		}
 
-        if user.Money < cost {
-            return errors.New("brak wystarczającej ilości XP")
-        }
+		if user.Money < cost {
+			return errors.New("brak wystarczającej ilości XP")
+		}
 
-        // 3. Odejmij pieniądze w bazie
-        user.Money -= cost
-        if err := tx.Save(&user).Error; err != nil {
-            return err
-        }
-        return tx.Model(&user).Association("Cards").Add(&card)
-    })
+		// 3. Odejmij pieniądze w bazie
+		user.Money -= cost
+		if err := tx.Save(&user).Error; err != nil {
+			return err
+		}
+		return tx.Model(&user).Association("Cards").Append(&card)
+	})
 }
 func (r *gormUserRepo) Create(user *models.User) error {
 	return r.DB.Transaction(func(tx *gorm.DB) error {
