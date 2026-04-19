@@ -1,4 +1,4 @@
-# Projekt Gra dla PKO XP - ETHSilesia 2026
+# Projekt Gra dla PKO XP - ETHSilesia 2026 (Slay the Scammer)
 
 Projekt autorskiej gry stworzony w ramach hackathonu **ETHSilesia 2026** dla **PKO XP: Gaming**.
 
