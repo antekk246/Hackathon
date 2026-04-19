@@ -2,20 +2,8 @@ import { ArrowLeft, Lock, TrendingUp, Loader2, ShieldCheck, CheckCircle2 } from 
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { gameApi } from '../api/gameApi';
-import { parseBackendTranslation } from '../utils/translationHelper';
-
-interface Card {
-    id: number;
-    name: string;
-    description: string;
-    upgradeToId?: number | null;
-    upgradeCost?: number;
-    unlockCost?: number;
-    owned: boolean;
-    level: number;
-    color?: string;
-    type: string | { id: number; name: string;[key: string]: any };
-}
+import type { Card, UserCard, CardType } from '../types/index';
+// import { parseBackendTranslation } from '../utils/translationHelper'; // Odkomentuj jeśli używasz
 
 interface CardShopProps {
     onBack: () => void;
@@ -25,68 +13,98 @@ interface CardShopProps {
 
 export function CardShop({ onBack, playerXP, onPurchase }: CardShopProps) {
     const { t } = useTranslation();
-    const [selectedCard, setSelectedCard] = useState<number | null>(null);
-    const [allCards, setAllCards] = useState<Card[]>([]);
+    
+    // ROZDZIELONE STANY ZAZNACZENIA (Bezpieczne!)
+    const [selectedInventoryId, setSelectedInventoryId] = useState<number | null>(null);
+    const [selectedShopId, setSelectedShopId] = useState<number | null>(null);
+    
     const [loading, setLoading] = useState(true);
+    const [catalog, setCatalog] = useState<Card[]>([]);
+    const [inventory, setInventory] = useState<UserCard[]>([]);
 
-    const loadData = async () => {
+    const loadData = async (showSpinner = true) => {
         try {
-            setLoading(true);
-            const [catalog, userInventory] = await Promise.all([
+            if (showSpinner) setLoading(true);
+            const [catalogData, userInventoryData] = await Promise.all([
                 gameApi.getAllCards(),
                 gameApi.getUserCards()
             ]);
 
-            // Mapowanie katalogu z uwzględnieniem posiadanych kart
-            const mergedCards = catalog.map((baseCard: any) => {
-                const ownedInstance = userInventory.find((u: any) => u.id === baseCard.id);
-                return {
-                    ...baseCard,
-                    owned: !!ownedInstance,
-                    level: ownedInstance ? (ownedInstance.level || 1) : 1,
-                    // Domyślne kolory jeśli brak w bazie
-                    color: baseCard.color || 'from-slate-700 to-slate-800'
-                };
-            });
-
-            setAllCards(mergedCards);
+            setCatalog(catalogData);
+            setInventory(userInventoryData);
         } catch (error) {
             console.error("Failed to sync shop data:", error);
         } finally {
-            setLoading(false);
+            if (showSpinner) setLoading(false);
         }
     };
 
     useEffect(() => { loadData(); }, []);
 
-    const handleUpgrade = async (card: Card) => {
-        const cost = card.upgradeCost || 100;
+    const handleUpgrade = async (viewCard: any) => {
+        if (!viewCard.instanceId) {
+            console.warn("Upgrade failed: No instance ID");
+            return; 
+        }
+
+        const cost = viewCard.upgradeCost || 100;
+        
         if (playerXP >= cost) {
             try {
-                await gameApi.upgradeCard(card.id);
+                const response = await gameApi.upgradeCard(viewCard.instanceId);
+                console.log("✅ [FRONTEND] Odpowiedź z serwera po upgrade:", response);
                 onPurchase(cost);
-                await loadData();
-                // Po ulepszeniu odznaczamy kartę, by zobaczyć zmiany w liście
-                setSelectedCard(null);
-            } catch (err) { console.warn("Upgrade failed:", err); }
+                await loadData(false);
+                setSelectedInventoryId(null); // Odznacza po sukcesie
+            } catch (err) { 
+                console.warn("Upgrade failed:", err); 
+            }
         }
     };
 
-    const handleUnlock = async (card: Card) => {
-        const cost = card.unlockCost || 100;
+    const handleUnlock = async (viewCard: any) => {
+        const cost = viewCard.unlockCost || 100;
         if (playerXP >= cost) {
             try {
-                await gameApi.buyCard(card.id);
+                await gameApi.buyCard(viewCard.id);
                 onPurchase(cost);
-                await loadData();
-                setSelectedCard(null);
-            } catch (err) { console.warn("Purchase failed:", err); }
+                await loadData(false);
+                setSelectedShopId(null);
+            } catch (err) { 
+                console.warn("Purchase failed:", err); 
+            }
         }
     };
 
-    const ownedCards = allCards.filter(c => c.owned);
-    const lockedCards = allCards.filter(c => !c.owned);
-    const selected = allCards.find(c => c.id === selectedCard);
+    // Zbiór posiadanych ID kart (do blokowania w sklepie)
+    const ownedCardsIds = new Set(inventory.map((userCard: UserCard) => userCard.cardId));
+    const lockedCards = catalog.filter((shopCard: Card) => !ownedCardsIds.has(shopCard.id));
+
+    // BUDOWANIE DANYCH DLA PANELU SZCZEGÓŁÓW
+    let selectedViewData: any = null;
+    
+    if (selectedInventoryId) {
+        // Jeśli kliknięto w talii
+        const uc = inventory.find(u => u.instanceId === selectedInventoryId);
+        if (uc) {
+            selectedViewData = {
+                ...uc.card,
+                instanceId: uc.instanceId,
+                level: uc.level || (uc.card as any).level || 1, // Zabezpieczenie dla poziomu
+                owned: true, // Wymuszamy true dla widoków
+            };
+        }
+    } else if (selectedShopId) {
+        // Jeśli kliknięto w sklepie
+        const c = catalog.find(c => c.id === selectedShopId);
+        if (c) {
+            selectedViewData = {
+                ...c,
+                level: 1,
+                owned: false,
+            };
+        }
+    }
 
     return (
         <div className="relative w-full h-full bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 overflow-hidden">
@@ -117,39 +135,50 @@ export function CardShop({ onBack, playerXP, onPurchase }: CardShopProps) {
             ) : (
                 <div className="relative z-10 flex h-[calc(100%-96px)]">
 
-                    {/* LEWA KOLUMNA: TWOJA TALIA (Z BACKENDU) */}
+                    {/* LEWA KOLUMNA: TWOJA TALIA */}
                     <div className="w-1/3 p-6 border-r border-slate-800 bg-slate-950/40 overflow-y-auto custom-scroll">
                         <div className="flex items-center gap-2 mb-6 border-b border-slate-800 pb-2">
                             <ShieldCheck className="w-5 h-5 text-green-400" />
                             <h2 className="text-xl font-bold text-white uppercase tracking-tight">Twoja Talia</h2>
                         </div>
                         <div className="space-y-3">
-                            {ownedCards.map(card => (
+                            {inventory.map((userCard) => (
                                 <CardListItem
-                                    key={`owned-${card.id}`}
-                                    card={card}
-                                    selected={selectedCard === card.id && card.owned}
-                                    onSelect={() => setSelectedCard(card.id)}
+                                    key={`inventory-${userCard.instanceId}`}
+                                    // "Wstrzykujemy" poziom i owned do widoku karty
+                                    card={{
+                                        ...userCard.card,
+                                        level: userCard.level || (userCard.card as any).level || 1,
+                                        owned: true
+                                    }}
+                                    selected={selectedInventoryId === userCard.instanceId}
+                                    onSelect={() => {
+                                        setSelectedInventoryId(userCard.instanceId);
+                                        setSelectedShopId(null); // Resetujemy sklep
+                                    }}
                                 />
                             ))}
-                            {ownedCards.length === 0 && (
-                                <div className="text-slate-500 text-sm italic p-4 text-center">Brak posiadanych kart w bazie.</div>
+                            {inventory.length === 0 && (
+                                <div className="text-slate-500 text-sm italic p-4 text-center">Nie masz kart!?</div>
                             )}
                         </div>
                     </div>
 
                     {/* PRAWA KOLUMNA: KATALOG / DETALE */}
                     <div className="w-2/3 p-8 overflow-y-auto custom-scroll">
-                        {selected ? (
+                        {selectedViewData ? (
                             <div className="max-w-2xl mx-auto animate-in slide-in-from-right-4 duration-300">
-                                <button onClick={() => setSelectedCard(null)} className="mb-6 text-cyan-400 font-bold flex items-center gap-2 hover:text-cyan-300 transition-colors">
+                                <button 
+                                    onClick={() => { setSelectedInventoryId(null); setSelectedShopId(null); }} 
+                                    className="mb-6 text-cyan-400 font-bold flex items-center gap-2 hover:text-cyan-300 transition-colors"
+                                >
                                     ← Powrót do Sklepu
                                 </button>
                                 <CardDetailPanel
-                                    card={selected}
+                                    card={selectedViewData}
                                     playerXP={playerXP}
-                                    onUpgrade={() => handleUpgrade(selected)}
-                                    onUnlock={() => handleUnlock(selected)}
+                                    onUpgrade={() => handleUpgrade(selectedViewData)}
+                                    onUnlock={() => handleUnlock(selectedViewData)}
                                 />
                             </div>
                         ) : (
@@ -160,7 +189,10 @@ export function CardShop({ onBack, playerXP, onPurchase }: CardShopProps) {
                                         <LockedCardPreview
                                             key={`shop-${card.id}`}
                                             card={card}
-                                            onSelect={() => setSelectedCard(card.id)}
+                                            onSelect={() => {
+                                                setSelectedShopId(card.id);
+                                                setSelectedInventoryId(null); // Resetujemy talię
+                                            }}
                                         />
                                     ))}
                                 </div>
@@ -176,14 +208,14 @@ export function CardShop({ onBack, playerXP, onPurchase }: CardShopProps) {
     );
 }
 
-// --- SUB-KOMPONENTY ---
-
+// --- SUB-KOMPONENTY POZOSTAJĄ BEZ ZMIAN ---
+// (Tu wklejasz stare funkcje: CardListItem, LockedCardPreview, CardDetailPanel)
 function CardListItem({ card, selected, onSelect }: any) {
-    const displayName = card.name.split('|')[0];
+    const displayName = card.name ? card.name.split('|')[0] : 'Nieznana';
     return (
         <button onClick={onSelect} className={`w-full p-3 rounded-xl transition-all border-2 text-left flex items-center gap-3 ${selected ? 'bg-cyan-500/10 border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.2)]' : 'bg-slate-800/40 border-slate-800 hover:border-slate-700'
             }`}>
-            <div className={`w-10 h-14 rounded bg-gradient-to-br ${card.color} shrink-0 shadow-inner`} />
+            <div className={`w-10 h-14 rounded bg-gradient-to-br ${card.color || 'from-slate-700 to-slate-800'} shrink-0 shadow-inner`} />
             <div className="min-w-0 flex-1">
                 <div className="text-white font-bold text-sm truncate uppercase italic">{displayName}</div>
                 <div className="text-cyan-500 text-[10px] font-black uppercase tracking-wider">Poziom {card.level}</div>
@@ -194,13 +226,13 @@ function CardListItem({ card, selected, onSelect }: any) {
 }
 
 function LockedCardPreview({ card, onSelect }: any) {
-    const displayName = card.name.split('|')[0];
+    const displayName = card.name ? card.name.split('|')[0] : 'Nieznana';
     return (
         <button onClick={onSelect} className="group relative flex flex-col bg-slate-900/40 border-2 border-slate-800 rounded-2xl p-4 hover:border-yellow-500/50 transition-all hover:-translate-y-1">
             <div className="absolute top-3 right-3 z-20 bg-slate-950/80 p-1.5 rounded-full border border-slate-700 shadow-xl">
                 <Lock className="w-3 h-3 text-yellow-500" />
             </div>
-            <div className={`h-32 rounded-xl bg-gradient-to-br ${card.color} mb-4 flex items-center justify-center text-4xl shadow-inner`}>💰</div>
+            <div className={`h-32 rounded-xl bg-gradient-to-br ${card.color || 'from-slate-700 to-slate-800'} mb-4 flex items-center justify-center text-4xl shadow-inner`}>💰</div>
             <div className="text-left">
                 <h3 className="text-white font-bold uppercase text-xs mb-1 truncate">{displayName}</h3>
                 <div className="flex items-center justify-between mt-3 bg-black/40 p-2 rounded-lg border border-slate-800">
@@ -212,13 +244,13 @@ function LockedCardPreview({ card, onSelect }: any) {
 }
 
 function CardDetailPanel({ card, playerXP, onUpgrade, onUnlock }: any) {
-    const displayName = card.name.split('|')[0];
+    const displayName = card.name ? card.name.split('|')[0] : 'Nieznana';
     const hasUpgrade = card.upgradeToId !== null && card.upgradeToId !== undefined;
-    const cardTypeDisplay = typeof card.type === 'object' ? card.type.name : card.type;
+    const cardTypeDisplay = typeof card.type === 'object' && card.type !== null ? card.type.name : card.type;
 
     return (
         <div className="bg-slate-800/80 backdrop-blur-xl rounded-3xl p-8 border-2 border-slate-700 shadow-2xl">
-            <div className={`w-full h-64 rounded-2xl bg-gradient-to-br ${card.color} mb-8 flex items-center justify-center shadow-[inset_0_0_40px_rgba(0,0,0,0.5)]`}>
+            <div className={`w-full h-64 rounded-2xl bg-gradient-to-br ${card.color || 'from-slate-700 to-slate-800'} mb-8 flex items-center justify-center shadow-[inset_0_0_40px_rgba(0,0,0,0.5)]`}>
                 <div className="text-center text-white">
                     <div className="text-8xl mb-4 drop-shadow-2xl">📱</div>
                     <div className="text-4xl font-black uppercase tracking-tighter italic">{displayName}</div>

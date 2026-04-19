@@ -39,7 +39,16 @@ export interface Card {
     description: string;
     upgradeToId?: number;
     upgradeTo?: Card;
+    upgradeCost?: number;
+    unlockCost?: number;
     cardAction: CardAction; // Backend wyśle tu sparsowany JSON
+}
+
+export interface UserCard {
+    instanceId: number; // To jest to czego szukaliśmy! (w GORM to było ID tabeli user_cards)
+    userId: number;
+    cardId: number;
+    card: Card; // Tu siedzą dane archetypu
 }
 
 export interface BuffContent {

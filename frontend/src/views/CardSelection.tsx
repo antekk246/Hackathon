@@ -2,26 +2,14 @@ import { ArrowLeft, Plus, X, Zap, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { gameApi } from '../api/gameApi';
-import { parseBackendTranslation } from '../utils/translationHelper';
-
-interface Card {
-    id: number;
-    type: string | { id: number; name: string;[key: string]: any };
-    title?: string;
-    titleKey?: string;
-    name?: string; // pole z bazy
-    description?: string;
-    descriptionKey?: string;
-    color: string;
-    owned: boolean;
-    level: number;
-}
+// Pamiętaj o imporcie nowych typów!
+import type { Card, UserCard } from '../types/index'; 
 
 type Difficulty = 'easy' | 'medium' | 'hard';
 
 interface CardSelectionProps {
     onBack: () => void;
-    onConfirm: (selectedCards: Card[]) => void;
+    onConfirm: (selectedCards: Card[]) => void; // Uwaga: zmieniłem tu na UserCard[]
     difficulty: Difficulty;
     adventureName?: string;
 }
@@ -45,17 +33,19 @@ export function CardSelection({
     adventureName
 }: CardSelectionProps) {
     const { t, i18n } = useTranslation();
-    const [dbCards, setDbCards] = useState<Card[]>([]);
+    
+    // ZMIANA: Trzymamy instancje z ekwipunku, nie archetypy
+    const [inventory, setInventory] = useState<UserCard[]>([]);
     const [loading, setLoading] = useState(true);
-    const [selectedCards, setSelectedCards] = useState<Card[]>([]);
-    const [selectedCardDetail, setSelectedCardDetail] = useState<number | null>(null);
+    const [selectedCards, setSelectedCards] = useState<UserCard[]>([]);
 
     useEffect(() => {
         const fetchFreshCards = async () => {
             try {
                 setLoading(true);
+                // gameApi.getUserCards() teraz poprawnie zwraca UserCard[]
                 const data = await gameApi.getUserCards();
-                setDbCards(data);
+                setInventory(data);
             } catch (error) {
                 console.error("Failed to fetch user cards:", error);
             } finally {
@@ -68,20 +58,27 @@ export function CardSelection({
     const cardLimit = CARD_LIMITS[difficulty];
     const canAddMore = selectedCards.length < cardLimit;
 
-    const handleAddCard = (card: Card) => {
-        if (canAddMore && !selectedCards.find(c => c.id === card.id)) {
-            setSelectedCards([...selectedCards, card]);
+    const handleAddCard = (userCard: UserCard) => {
+        // ZMIANA: Szukamy po unikalnym instanceId
+        if (canAddMore && !selectedCards.find(c => c.instanceId === userCard.instanceId)) {
+            setSelectedCards([...selectedCards, userCard]);
         }
     };
 
-    const handleRemoveCard = (cardId: number) => {
-        setSelectedCards(selectedCards.filter(c => c.id !== cardId));
+    const handleRemoveCard = (instanceId: number) => {
+        // ZMIANA: Usuwamy po unikalnym instanceId
+        setSelectedCards(selectedCards.filter(c => c.instanceId !== instanceId));
     };
 
     const handleConfirm = () => {
         if (selectedCards.length > 0) {
-            onConfirm(selectedCards);
-        }
+        // HACKATHON QUICK-FIX: 
+        // Wyciągamy z instancji gracza same archetypy, 
+        // żeby backend dostał poprawne ID bazowe z katalogu
+        const archetypes = selectedCards.map((userCard: UserCard) => userCard.card);
+        
+        onConfirm(archetypes);
+    }
     };
 
     return (
@@ -117,22 +114,24 @@ export function CardSelection({
                 </div>
             ) : (
                 <div className="relative z-10 flex h-[calc(100%-100px)]">
+                    {/* LEWA KOLUMNA: TWOJE KARTY */}
                     <div className="w-1/2 p-6 border-r border-slate-700 overflow-y-auto custom-scroll">
                         <h2 className="text-2xl font-bold text-white mb-4 italic uppercase">{t('selection.yourCards')}</h2>
                         <div className="space-y-3">
-                            {dbCards.map(card => (
+                            {inventory.map(userCard => (
                                 <AvailableCardItem
-                                    key={card.id}
-                                    card={card}
-                                    isSelected={selectedCards.some(c => c.id === card.id)}
-                                    isSelectable={canAddMore || selectedCards.some(c => c.id === card.id)}
-                                    onSelect={() => handleAddCard(card)}
+                                    key={`avail-${userCard.instanceId}`}
+                                    userCard={userCard}
+                                    isSelected={selectedCards.some(c => c.instanceId === userCard.instanceId)}
+                                    isSelectable={canAddMore || selectedCards.some(c => c.instanceId === userCard.instanceId)}
+                                    onSelect={() => handleAddCard(userCard)}
                                     lang={i18n.language}
                                 />
                             ))}
                         </div>
                     </div>
 
+                    {/* PRAWA KOLUMNA: KARTY NA WYPRAWĘ */}
                     <div className="w-1/2 p-6 overflow-y-auto custom-scroll bg-slate-950/30">
                         <h2 className="text-2xl font-bold text-white mb-4 italic uppercase">{t('selection.adventureCards')}</h2>
                         {selectedCards.length === 0 ? (
@@ -142,11 +141,11 @@ export function CardSelection({
                             </div>
                         ) : (
                             <div className="space-y-3">
-                                {selectedCards.map(card => (
+                                {selectedCards.map(userCard => (
                                     <SelectedCardItem
-                                        key={card.id}
-                                        card={card}
-                                        onRemove={() => handleRemoveCard(card.id)}
+                                        key={`sel-${userCard.instanceId}`}
+                                        userCard={userCard}
+                                        onRemove={() => handleRemoveCard(userCard.instanceId)}
                                         lang={i18n.language}
                                     />
                                 ))}
@@ -165,10 +164,12 @@ export function CardSelection({
     );
 }
 
-// --- KOMPONENTY POMOCNICZE (MUSZĄ BYĆ W TYM PLIKU) ---
+// --- KOMPONENTY POMOCNICZE ---
 
-function AvailableCardItem({ card, isSelected, isSelectable, onSelect, lang }: any) {
-    const [namePL, nameEN] = (card.name || "").split('|');
+function AvailableCardItem({ userCard, isSelected, isSelectable, onSelect, lang }: any) {
+    // Wyciągamy dane z zagnieżdżonego obiektu card i level z instancji
+    const card = userCard.card;
+    const [namePL, nameEN] = (card?.name || "").split('|');
     const displayName = lang === 'pl' ? namePL : (nameEN || namePL);
 
     return (
@@ -181,9 +182,10 @@ function AvailableCardItem({ card, isSelected, isSelectable, onSelect, lang }: a
                 } ${!isSelectable && !isSelected ? 'opacity-30' : ''}`}
         >
             <div>
-                <div className="text-white font-bold text-lg uppercase italic">{displayName || card.title}</div>
-                <div className="text-slate-400 text-xs italic">{card.description}</div>
-                <div className="text-yellow-500 text-[10px] font-black mt-1">POZIOM {card.level}</div>
+                <div className="text-white font-bold text-lg uppercase italic">{displayName || card?.title}</div>
+                <div className="text-slate-400 text-xs italic">{card?.description}</div>
+                {/* Używamy poziomu z instancji gracza */}
+                <div className="text-yellow-500 text-[10px] font-black mt-1">POZIOM {userCard.level || card?.level || 1}</div>
             </div>
             <div className={`p-2 rounded-lg ${isSelected ? 'bg-cyan-500 text-white' : 'bg-slate-700 text-slate-400'}`}>
                 {isSelected ? <X className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
@@ -192,8 +194,9 @@ function AvailableCardItem({ card, isSelected, isSelectable, onSelect, lang }: a
     );
 }
 
-function SelectedCardItem({ card, onRemove, lang }: any) {
-    const [namePL, nameEN] = (card.name || "").split('|');
+function SelectedCardItem({ userCard, onRemove, lang }: any) {
+    const card = userCard.card;
+    const [namePL, nameEN] = (card?.name || "").split('|');
     const displayName = lang === 'pl' ? namePL : (nameEN || namePL);
 
     return (
@@ -202,26 +205,11 @@ function SelectedCardItem({ card, onRemove, lang }: any) {
             className="w-full text-left p-4 rounded-xl bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border-2 border-cyan-500/50 hover:border-red-500/50 transition-all group"
         >
             <div className="flex items-center justify-between">
-                <div className="text-white font-bold uppercase italic">{displayName || card.title}</div>
+                <div className="text-white font-bold uppercase italic">{displayName || card?.title}</div>
                 <div className="p-1 rounded bg-red-500/20 text-red-400 group-hover:bg-red-500 group-hover:text-white transition-all">
                     <X className="w-4 h-4" />
                 </div>
             </div>
         </button>
-    );
-}
-
-function CardDetailModal({ card, onClose }: any) {
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={onClose}>
-            <div className="bg-slate-900 border-2 border-cyan-400 p-8 rounded-3xl max-w-sm w-full mx-4" onClick={e => e.stopPropagation()}>
-                <div className="text-center">
-                    <div className="text-6xl mb-4">📱</div>
-                    <h3 className="text-2xl font-bold text-white mb-2 uppercase italic">{card.name}</h3>
-                    <p className="text-slate-400 text-sm mb-6">{card.description}</p>
-                    <button onClick={onClose} className="w-full py-3 bg-slate-800 text-white rounded-xl font-bold">ZAMKNIJ</button>
-                </div>
-            </div>
-        </div>
     );
 }

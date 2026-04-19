@@ -1,5 +1,5 @@
 // frontend/src/api/gameApi.ts
-import type { User, Card, Adventure, DifficultyLevel, Room } from '../types';
+import type { User, Card, Adventure, DifficultyLevel, Room, UserCard } from '../types';
 
 const BASE_URL = '/api/v1';
 
@@ -25,13 +25,28 @@ export const gameApi = {
         return response.json();
     },
 
-    getUserCards: async (): Promise<Card[]> => {
+    //getUserCards: async (): Promise<Card[]> => {
+    //    const response = await fetch(`${BASE_URL}/cards/user`, { headers: getHeaders() });
+    //    if (!response.ok) throw new Error('Błąd pobierania kart użytkownika');
+    //    return response.json();
+    //},
+
+    getUserCards: async (): Promise<UserCard[]> => {
         const response = await fetch(`${BASE_URL}/cards/user`, { headers: getHeaders() });
         if (!response.ok) throw new Error('Błąd pobierania kart użytkownika');
+        return response.json(); 
+    },
+
+    upgradeUserCard: async (cardId: number): Promise<Card> => {
+        const response = await fetch(`${BASE_URL}/cards/${cardId}/upgrade`, {
+            method: 'POST',
+            headers: getHeaders(),
+        });
+        if (!response.ok) throw new Error('Błąd ulepszania karty');
         return response.json();
     },
 
-    upgradeCard: async (cardId: number): Promise<Card> => {
+    upgradeCard: async (cardId: number): Promise<{status: string, message: string}> => {
         const response = await fetch(`${BASE_URL}/cards/${cardId}/upgrade`, {
             method: 'POST',
             headers: getHeaders(),
