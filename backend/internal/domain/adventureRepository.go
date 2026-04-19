@@ -8,6 +8,7 @@ import (
 
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type AdventureRepository interface {
@@ -207,5 +208,12 @@ func (r *gormAdventureRepo) DeleteSecure(adventureID uint, userID uint) error {
 	return nil
 }
 func (r *gormAdventureRepo) DeleteByUserID(userID uint) error {
-	return r.DB.Where("user_id = ?", userID).Delete(&models.Adventure{}).Error
+	var adventure models.Adventure
+	//check if adventure exists for the user before deleting
+	if err := r.DB.Where("user_id = ?", userID).First(&adventure).Error; err != nil {
+		return err
+	}
+
+	//return r.DB.Where("user_id = ?", userID).Delete(&models.Adventure{}).Error
+	return r.DB.Select(clause.Associations).Delete(&adventure).Error
 }
