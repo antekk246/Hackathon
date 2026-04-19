@@ -112,7 +112,7 @@ func (h *AdventureHandler) StartAdventure(c *gin.Context) {
 
 	if err := h.Repo.Create(&newAdventure); err != nil {
 		// INCLUDE THE ERROR HERE:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start adventure: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start adventure: " + err.Error() + "with cards: " + fmt.Sprint(cards)})
 		return
 	}
 
