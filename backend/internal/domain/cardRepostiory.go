@@ -150,18 +150,54 @@ func (r *gormCardRepo) UpgradeCardInstance(userID uint, instanceID uint) error {
 		return nil
 	})
 }
-func (r *gormCardRepo) VerifyUserOwnsCards(userID uint, cardIDs []uint) error {
-	var count int64
-	// Check the join table for user ownership
-	err := r.DB.Table("user_cards").
-		Where("user_id = ? AND card_id IN ?", userID, cardIDs).
-		Count(&count).Error
 
-	if err != nil {
-		return err
+// func (r *gormCardRepo) VerifyUserOwnsCards(userID uint, cardIDs []uint) error {
+// 	var count int64
+// 	// Check the join table for user ownership
+// 	err := r.DB.Table("user_cards").
+// 		Where("user_id = ? AND card_id IN ?", userID, cardIDs).
+// 		Count(&count).Error
+
+// 	if err != nil {
+// 		return err
+// 	}
+// 	if count != int64(len(cardIDs)) {
+// 		return errors.New("one or more cards are not owned by the user")
+// 	}
+// 	return nil
+// }
+
+// new VerifyUserOwnsCards that counts duplicates properly
+func (r *gormCardRepo) VerifyUserOwnsCards(userID uint, requestedCardIDs []uint) error {
+	// 1. Liczymy, ile sztuk KAŻDEJ karty gracz chce wziąć na wyprawę
+	// Np. map[5: 2, 8: 1] -> "Chcę dwie karty ID 5 i jedną ID 8"
+	requiredCounts := make(map[uint]int)
+	for _, id := range requestedCardIDs {
+		requiredCounts[id]++
 	}
-	if count != int64(len(cardIDs)) {
-		return errors.New("one or more cards are not owned by the user")
+
+	// 2. Pobieramy WSZYSTKIE instancje kart z plecaka gracza
+	var userCards []models.UserCard
+	if err := r.DB.Where("user_id = ?", userID).Find(&userCards).Error; err != nil {
+		return fmt.Errorf("błąd pobierania ekwipunku: %w", err)
 	}
+
+	// 3. Liczymy, ile sztuk danej karty gracz FAKTYCZNIE posiada w bazie
+	ownedCounts := make(map[uint]int)
+	for _, uc := range userCards {
+		ownedCounts[uc.CardID]++
+	}
+
+	// 4. Konfrontujemy to, co gracz chce wziąć, z tym, co rzeczywiście ma
+	for cardID, requiredAmount := range requiredCounts {
+		ownedAmount := ownedCounts[cardID]
+		if ownedAmount < requiredAmount {
+			// Zwracamy bardzo szczegółowy błąd, żeby w razie czego wiedzieć co nie zagrało!
+			return fmt.Errorf("brakuje karty bazowej o ID %d (chcesz wziąć: %d, a posiadasz tylko: %d)",
+				cardID, requiredAmount, ownedAmount)
+		}
+	}
+
+	// Wszystko się zgadza, gracz ma odpowiednią liczbę duplikatów!
 	return nil
 }
