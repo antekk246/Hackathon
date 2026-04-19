@@ -443,7 +443,10 @@ func (h *AdventureHandler) EndTurn(c *gin.Context) {
 		h.moveCardToDiscard(room.Fight, cardID)
 	}
 
+	// todo handleEnemyTunrn
+
 	// draw new hand of 4 cards
+	// todo move to start turn logic
 	h.handleDraw(room.Fight, 4)
 
 	// Reset points to 2 for the next turn and flip turn (or trigger enemy AI here)
