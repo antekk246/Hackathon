@@ -89,6 +89,7 @@ func (h *AdventureHandler) StartAdventure(c *gin.Context) {
 		// Force delete
 		if err := h.Repo.DeleteByUserID(userID); err != nil {
 			// INCLUDE THE ERROR HERE:
+
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reset adventure: " + err.Error()})
 			return
 		}
@@ -408,7 +409,14 @@ func (h *AdventureHandler) handleDraw(fight *models.Fight, count int) {
 
 	for i := 0; i < count; i++ {
 		if len(deck) == 0 {
-			// Optional: Reshuffle logic if deck is empty
+			// reshuffle discard into deck if deck is empty
+			var discard []uint
+			json.Unmarshal(fight.UsedCards, &discard)
+			deck = discard
+			hand = hand[:0] // clear hand
+
+			// Clear discard pile
+			fight.UsedCards, _ = json.Marshal([]uint{})
 			break
 		}
 		// Take from top of deck
@@ -426,6 +434,17 @@ func (h *AdventureHandler) EndTurn(c *gin.Context) {
 	userID := c.MustGet("userID").(uint)
 	adv, _ := h.Repo.GetByUserID(userID)
 	room, _ := h.RoomRepo.GetRoomWithDetails(adv.CurrentRoomID)
+
+	// put all cards from hand to discard
+	var hand []uint
+	json.Unmarshal(room.Fight.Cards, &hand)
+
+	for _, cardID := range hand {
+		h.moveCardToDiscard(room.Fight, cardID)
+	}
+
+	// draw new hand of 4 cards
+	h.handleDraw(room.Fight, 4)
 
 	// Reset points to 2 for the next turn and flip turn (or trigger enemy AI here)
 	room.Fight.DecisionPoints = 2
