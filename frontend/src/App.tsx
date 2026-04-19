@@ -17,7 +17,7 @@ export const handleLogout = () => {
 };
 
 export default function App() {
-    const [gameState, setGameState] = useState<'menu' | 'game' | 'shop' | 'selection'>('game');
+    const [gameState, setGameState] = useState<'menu' | 'game' | 'shop' | 'selection'>('menu');
     const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('easy');
     const [showTutorial, setShowTutorial] = useState(false);
     const [tutorialStep, setTutorialStep] = useState(0);

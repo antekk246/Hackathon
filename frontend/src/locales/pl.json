@@ -3,11 +3,11 @@
     "title": "PKO XP: Gaming",
     "subtitle": "Broń się przed cyfrowymi zagrożeniami",
     "yourXP": "Twoje XP: {{xp}}",
-    "description": "Naucz się rozpoznawać oszustwa, fałszywe płatności i zagrożenia online",
+    "description": "Naucz się rozpoznawać oszustwa, fałszywe płatności i niebezpieczeństwa w sieci",
     "chooseAdventure": "Wybierz Przygodę",
     "easy": {
       "label": "Łatwy",
-      "description": "Naucz się podstaw"
+      "description": "Poznaj podstawy"
     },
     "medium": {
       "label": "Średni",
@@ -20,29 +20,32 @@
     "investInYourself": "Inwestuj w Siebie",
     "securityGuide": "Przewodnik Bezpieczeństwa",
     "settings": "Ustawienia",
-    "footer": "Bądź bezpieczny online • Poznaj zagrożenia • Chroń siebie"
+    "logout": "Wyloguj się",
+    "loginSuccess": "Zalogowano pomyślnie!",
+    "footer": "Bądź bezpieczny w sieci • Poznaj zagrożenia • Chroń siebie"
   },
   "gameLevel": {
     "decisions": "Decyzje: {{current}}/{{max}}",
     "adventureProgress": "Postęp Przygody",
-    "endTurn": "Zakończ Turę",
-    "guide": "Przewodnik",
-    "backToMenu": "Powrót do Menu",
-    "you": "Ty",
+    "endTurn": "ZAKOŃCZ TURĘ",
+    "playCard": "ZAGRAJ KARTĘ",
+    "noEnergy": "BRAK ENERGII",
+    "guide": "Poradnik",
+    "backToMenu": "Menu Główne",
+    "you": "TY",
+    "cardsInHand": "Karty",
     "scammer": "Oszust",
-    "phishingScammer": "Oszust Phishingowy",
-    "phishingQuote": "Kliknij tutaj, aby odebrać nagrodę!",
-    "nextAttack": "Następny: Atak {{damage}}",
-    "chooseDefense": "Wybierz akcje obronne (zostało {{count}} decyzji)",
-    "linkGoblin": "Goblin Linkowy",
-  "scamTornado": "Tornado Wyłudzeń",
-  "systemFailure": "SYSTEM AWARIA",
-  "neutralized": "ZNEUTRALIZOWANY",
-  "debug": {
-    "animationTest": "Test animacji",
-    "hitPlayer": "Traf gracza (-20 HP)",
-    "hitEnemy": "Atakuj wroga (-25 HP)"
-  }
+    "phishingScammer": "Phishingowy Oszust",
+    "linkGoblin": "Goblin Linków",
+    "scamTornado": "Tornado Scamów",
+    "systemFailure": "AWARIA SYSTEMU",
+    "neutralized": "ZNEUTRALIZOWANY",
+    "levelCleared": "ZAGROŻENIE UNIESZKODLIWIONE",
+    "gameOverTitle": "PRZEGRANA!",
+    "gameOverDesc": "Twoje systemy zostały przejęte.",
+    "tryAgain": "SPRÓBUJ PONOWNIE",
+    "victoryTitle": "ZWYCIĘSTWO!",
+    "finishGame": "ZAKOŃCZ GRĘ"
   },
   "settings": {
     "title": "Ustawienia",
