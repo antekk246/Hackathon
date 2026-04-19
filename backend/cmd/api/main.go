@@ -56,6 +56,7 @@ func main() {
 		&models.Enemy{},
 		&models.Reward{},
 		&models.Buff{},
+		&models.Encounter{},
 	)
 	if err != nil {
 		log.Fatalf("Błąd podczas czyszczenia bazy: %v", err)
@@ -72,6 +73,7 @@ func main() {
 		&models.Fight{},
 		&models.Event{},
 		&models.Buff{},
+		models.Encounter{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)

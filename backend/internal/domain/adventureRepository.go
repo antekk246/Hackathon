@@ -2,6 +2,7 @@ package domain
 
 import (
 	"backend/internal/models"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 
@@ -42,31 +43,57 @@ func (r *gormAdventureRepo) GetByUserID(userID uint) (*models.Adventure, error) 
 	}
 	return &adventure, nil
 }
-
 func (r *gormAdventureRepo) Create(adventure *models.Adventure) error {
 	roomCount := 5 * adventure.Level
 
 	return r.DB.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Omit("Cards").Create(adventure).Error; err != nil {
+		// Omit chroni przed modyfikacją tabeli źródłowej kart
+		if err := tx.Omit("Cards.*").Create(adventure).Error; err != nil {
 			return err
 		}
+
+		// 1. ZBUDUJ I POTASUJ TALIĘ GRACZA
+		var startingDeck []uint
+		for _, card := range adventure.Cards {
+			startingDeck = append(startingDeck, card.ID)
+		}
+
+		rand.Shuffle(len(startingDeck), func(i, j int) {
+			startingDeck[i], startingDeck[j] = startingDeck[j], startingDeck[i]
+		})
+
+		var initialHand []uint
+		var remainingDeck []uint
+
+		handSize := 4
+		if len(startingDeck) < 4 {
+			handSize = len(startingDeck)
+		}
+
+		initialHand = startingDeck[:handSize]
+		remainingDeck = startingDeck[handSize:]
+
+		// Serializacja
+		handBytes, _ := json.Marshal(initialHand)
+		deckBytes, _ := json.Marshal(remainingDeck)
+
+		handJSON := datatypes.JSON(handBytes)
+		deckJSON := datatypes.JSON(deckBytes)
+		emptyJSON := datatypes.JSON([]byte(`[]`))
 
 		var lastRoomID *uint
 		advLevel := adventure.Level
 
-		// Generate Rooms in REVERSE
+		// 2. GENEROWANIE POKOI
 		for i := roomCount; i > 0; i-- {
 			specificLevel := advLevel + uint(rand.Intn(3))
-
-			// 1. Identify if this is the final room (Boss Room)
 			isBossRoom := (i == roomCount)
 
 			var roomType string
 			if isBossRoom {
 				roomType = "fight"
-				specificLevel += 2 // Boost the boss level by 2!
+				specificLevel += 2
 			} else {
-				// Normal room logic: 25% Events, 75% Fights
 				roomType = "fight"
 				if rand.Float32() < 0.25 {
 					roomType = "event"
@@ -79,42 +106,51 @@ func (r *gormAdventureRepo) Create(adventure *models.Adventure) error {
 				NextRoomID:  lastRoomID,
 			}
 
-			// If you eventually add an "IsBoss" boolean to your Room model,
-			// you can easily set it here:
-			// room.IsBoss = isBossRoom
-
 			if roomType == "fight" {
-				var enemyIDs []uint
+				var encounterIDs []uint
 
-				// Fetch matching enemies based on BOTH level and the isBoss flag
-				err := tx.Model(&models.Enemy{}).
-					Where("enemy_level = ? AND is_boss = ?", specificLevel, isBossRoom).
-					Pluck("id", &enemyIDs).Error
+				// Szukamy odpowiednich zasianych scenariuszy
+				err := tx.Model(&models.Encounter{}).
+					Where("level = ? AND is_boss = ?", specificLevel, isBossRoom).
+					Pluck("id", &encounterIDs).Error
 
 				if err != nil {
-					return fmt.Errorf("failed to fetch enemies: %w", err)
+					return fmt.Errorf("failed to fetch encounters: %w", err)
 				}
 
-				// FALLBACK: If you don't have a boss at this exact specificLevel yet,
-				// fall back to fetching ANY enemy that matches the boss requirement.
-				if len(enemyIDs) == 0 {
-					err = tx.Model(&models.Enemy{}).
+				if len(encounterIDs) == 0 {
+					err = tx.Model(&models.Encounter{}).
 						Where("is_boss = ?", isBossRoom).
-						Pluck("id", &enemyIDs).Error
+						Pluck("id", &encounterIDs).Error
 
-					if err != nil || len(enemyIDs) == 0 {
-						return fmt.Errorf("database missing required enemy data (isBoss: %v)", isBossRoom)
+					if err != nil || len(encounterIDs) == 0 {
+						return fmt.Errorf("database missing required encounter data (isBoss: %v)", isBossRoom)
 					}
 				}
 
-				// Pick a random enemy from the results
-				randomEnemyID := enemyIDs[rand.Intn(len(enemyIDs))]
+				// Losujemy scenariusz
+				randomEncounterID := encounterIDs[rand.Intn(len(encounterIDs))]
 
+				// Pobieramy scenariusz Z DOŁĄCZONYM POTWOREM (Preload), żeby odczytać jego BaseHealth
+				var selectedEncounter models.Encounter
+				if err := tx.Preload("Enemy").First(&selectedEncounter, randomEncounterID).Error; err != nil {
+					return fmt.Errorf("failed to load encounter details: %w", err)
+				}
+
+				// 3. TWORZYMY AKTYWNĄ INSTANCJĘ WALKI (FIGHT)
 				fight := models.Fight{
-					EnemyID:             randomEnemyID,
+					EnemyID:             selectedEncounter.EnemyID,
 					PlayerTurn:          true,
-					CurrentPlayerHealth: 100,
-					Cards:               datatypes.JSON([]byte(`[]`)),
+					DecisionPoints:      3, // Startowa mana/punkty akcji gracza
+					CurrentPlayerHealth: adventure.PlayerHealth,
+
+					// Skoro pobraliśmy potwora (Preload), możemy przypisać mu startowe HP!
+					CurrentEnemyHealth: selectedEncounter.Enemy.BaseHealth,
+					MaxEnemyHealth:     selectedEncounter.Enemy.BaseHealth,
+
+					Cards:       handJSON, // 4 wylosowane karty na ręce
+					CardsInDeck: deckJSON, // Reszta kart w talii
+					UsedCards:   emptyJSON,
 				}
 
 				if err := tx.Create(&fight).Error; err != nil {
@@ -123,7 +159,7 @@ func (r *gormAdventureRepo) Create(adventure *models.Adventure) error {
 				room.FightID = &fight.ID
 
 			} else {
-				// Event Logic
+				// Tworzenie Eventu
 				reward := models.Reward{
 					RewardLevel:   specificLevel,
 					RewardContent: datatypes.JSON([]byte(fmt.Sprintf(`{"gold": %d}`, specificLevel*25))),
@@ -134,7 +170,7 @@ func (r *gormAdventureRepo) Create(adventure *models.Adventure) error {
 
 				event := models.Event{
 					RewardID:    &reward.ID,
-					CardsOnHand: datatypes.JSON([]byte(`[]`)),
+					CardsOnHand: handJSON, // Podpinamy karty
 				}
 				if err := tx.Create(&event).Error; err != nil {
 					return err

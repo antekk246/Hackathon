@@ -9,6 +9,7 @@ import (
 // 1. The Interface
 type RoomRepository interface {
 	GetRoomWithDetails(roomID uint) (*models.Room, error)
+	UpdateFight(fight *models.Fight) error
 }
 
 // 2. The Struct Definition (This must match your method receiver!)
@@ -34,4 +35,7 @@ func (r *roomRepo) GetRoomWithDetails(roomID uint) (*models.Room, error) {
 		First(&room, roomID).Error
 
 	return &room, err
+}
+func (r *roomRepo) UpdateFight(fight *models.Fight) error {
+	return r.db.Save(fight).Error
 }

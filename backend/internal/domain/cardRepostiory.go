@@ -10,10 +10,12 @@ import (
 type CardRepository interface {
 	GetAll() ([]models.Card, error)
 	GetByID(id uint) (*models.Card, error)
+	GetByIDs(ids []uint) ([]models.Card, error)
 	GetByUserID(userID uint) ([]models.Card, error)
 	GetByAdventureID(adventureID uint, userID uint) ([]models.Card, error)
 	UpgradeCardInstance(userID uint, instanceID uint) error
 	VerifyUserOwnsCards(userID uint, cardIDs []uint) error
+	GetCardsMapByIDs(ids []uint) (map[uint]models.Card, error)
 }
 
 type gormCardRepo struct {
@@ -23,7 +25,24 @@ type gormCardRepo struct {
 func NewCardRepository(db *gorm.DB) CardRepository {
 	return &gormCardRepo{DB: db}
 }
+func (r *gormCardRepo) GetCardsMapByIDs(ids []uint) (map[uint]models.Card, error) {
+	var cards []models.Card
+	if err := r.DB.Where("id IN ?", ids).Find(&cards).Error; err != nil {
+		return nil, err
+	}
 
+	cardMap := make(map[uint]models.Card)
+	for _, card := range cards {
+		cardMap[card.ID] = card
+	}
+	return cardMap, nil
+}
+func (r *gormCardRepo) GetByIDs(ids []uint) ([]models.Card, error) {
+	var cards []models.Card
+	// This fetches all card details for the IDs provided
+	err := r.DB.Where("id IN ?", ids).Find(&cards).Error
+	return cards, err
+}
 func (r *gormCardRepo) GetAll() ([]models.Card, error) {
 	var cards []models.Card
 	// Preload both Type and the recursive UpgradeTo relationship
