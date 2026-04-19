@@ -128,6 +128,7 @@ func Seed(db *gorm.DB) error {
 		{
 			EnemyLevel: 1,
 			IsBoss:     false,
+			BaseHealth: 150,
 			EnemyContent: datatypes.JSON([]byte(`{
                 "name": "Fałszywy SMS", 
                 "hp": 150, 
@@ -138,6 +139,7 @@ func Seed(db *gorm.DB) error {
 		{
 			EnemyLevel: 2,
 			IsBoss:     false,
+			BaseHealth: 350,
 			EnemyContent: datatypes.JSON([]byte(`{
                 "name": "Nagła Naprawa Roweru", 
                 "hp": 350, 
@@ -148,6 +150,7 @@ func Seed(db *gorm.DB) error {
 		{
 			EnemyLevel: 3,
 			IsBoss:     true,
+			BaseHealth: 600,
 			EnemyContent: datatypes.JSON([]byte(`{
                 "name": "Nieuczciwy Sprzedawca", 
                 "hp": 600,
