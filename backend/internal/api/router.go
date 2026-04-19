@@ -57,6 +57,7 @@ func SetupRouter(authH *handler.AuthHandler, adventureH *handler.AdventureHandle
 				adventures.GET("/room", adventureH.GetCurrentRoom)
 				adventures.POST("/advance", adventureH.AdvanceRoom)
 				adventures.POST("/play/:instanceID", adventureH.PlayCard)
+				adventures.POST("/end-turn", adventureH.EndTurn)
 
 				// --- NOWY ENDPOINT ---
 				// Pobiera dynamiczny stan kart: Hand, Draw Pile, Discard Pile oraz HP/Manę
