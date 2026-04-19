@@ -1,4 +1,4 @@
-import { ArrowLeft, Lock, TrendingUp, Loader2, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Lock, TrendingUp, Loader2, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { gameApi } from '../api/gameApi';
@@ -6,16 +6,15 @@ import { parseBackendTranslation } from '../utils/translationHelper';
 
 interface Card {
     id: number;
-    type: string | { id: number; name: string;[key: string]: any };
-    title?: string;
-    titleKey?: string;
-    description?: string;
-    descriptionKey?: string;
-    color: string;
+    name: string;
+    description: string;
+    upgradeToId?: number | null;
+    upgradeCost?: number;
+    unlockCost?: number;
     owned: boolean;
     level: number;
-    unlockCost?: number;
-    upgradeCost?: number;
+    color?: string;
+    type: string | { id: number; name: string;[key: string]: any };
 }
 
 interface CardShopProps {
@@ -38,16 +37,21 @@ export function CardShop({ onBack, playerXP, onPurchase }: CardShopProps) {
                 gameApi.getUserCards()
             ]);
 
-            const mergedCards = catalog.map(baseCard => {
-                const ownedInstance = userInventory.find(u => u.id === baseCard.id);
-                return ownedInstance
-                    ? { ...baseCard, ...ownedInstance, owned: true }
-                    : { ...baseCard, owned: false };
+            // Mapowanie katalogu z uwzględnieniem posiadanych kart
+            const mergedCards = catalog.map((baseCard: any) => {
+                const ownedInstance = userInventory.find((u: any) => u.id === baseCard.id);
+                return {
+                    ...baseCard,
+                    owned: !!ownedInstance,
+                    level: ownedInstance ? (ownedInstance.level || 1) : 1,
+                    // Domyślne kolory jeśli brak w bazie
+                    color: baseCard.color || 'from-slate-700 to-slate-800'
+                };
             });
 
             setAllCards(mergedCards);
         } catch (error) {
-            console.error("Failed to sync cards:", error);
+            console.error("Failed to sync shop data:", error);
         } finally {
             setLoading(false);
         }
@@ -56,22 +60,27 @@ export function CardShop({ onBack, playerXP, onPurchase }: CardShopProps) {
     useEffect(() => { loadData(); }, []);
 
     const handleUpgrade = async (card: Card) => {
-        if (card.upgradeCost && playerXP >= card.upgradeCost) {
+        const cost = card.upgradeCost || 100;
+        if (playerXP >= cost) {
             try {
                 await gameApi.upgradeCard(card.id);
-                onPurchase(card.upgradeCost);
+                onPurchase(cost);
                 await loadData();
-            } catch (err) { console.warn("Backend upgrade failed:", err); }
+                // Po ulepszeniu odznaczamy kartę, by zobaczyć zmiany w liście
+                setSelectedCard(null);
+            } catch (err) { console.warn("Upgrade failed:", err); }
         }
     };
 
     const handleUnlock = async (card: Card) => {
-        if (card.unlockCost && playerXP >= card.unlockCost) {
+        const cost = card.unlockCost || 100;
+        if (playerXP >= cost) {
             try {
                 await gameApi.buyCard(card.id);
-                onPurchase(card.unlockCost);
+                onPurchase(cost);
                 await loadData();
-            } catch (err) { console.warn("Backend unlock failed:", err); }
+                setSelectedCard(null);
+            } catch (err) { console.warn("Purchase failed:", err); }
         }
     };
 
@@ -80,83 +89,61 @@ export function CardShop({ onBack, playerXP, onPurchase }: CardShopProps) {
     const selected = allCards.find(c => c.id === selectedCard);
 
     return (
-        <div className="relative w-full h-full bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 overflow-hidden">
-            {/* Wstrzyknięte style dla scrollbara */}
+        <div className="relative w-full h-full bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 overflow-hidden">
             <style>{`
-        .custom-scroll::-webkit-scrollbar {
-          width: 8px;
-        }
-        .custom-scroll::-webkit-scrollbar-track {
-          background: rgba(15, 23, 42, 0.4);
-        }
-        .custom-scroll::-webkit-scrollbar-thumb {
-          background: rgba(34, 211, 238, 0.3);
-          border-radius: 10px;
-        }
-        .custom-scroll::-webkit-scrollbar-thumb:hover {
-          background: rgba(34, 211, 238, 0.6);
-        }
-        .custom-scroll {
-          scrollbar-width: thin;
-          scrollbar-color: rgba(34, 211, 238, 0.3) rgba(15, 23, 42, 0.4);
-        }
-      `}</style>
+                .custom-scroll::-webkit-scrollbar { width: 6px; }
+                .custom-scroll::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.4); }
+                .custom-scroll::-webkit-scrollbar-thumb { background: rgba(34, 211, 238, 0.3); border-radius: 10px; }
+                .custom-scroll { scrollbar-width: thin; scrollbar-color: rgba(34, 211, 238, 0.3) rgba(15, 23, 42, 0.4); }
+            `}</style>
 
-            {/* Background Grid */}
-            <div className="absolute inset-0 opacity-20">
-                <div className="absolute inset-0" style={{
-                    backgroundImage: 'linear-gradient(rgba(59, 130, 246, 0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(59, 130, 246, 0.3) 1px, transparent 1px)',
-                    backgroundSize: '50px 50px'
-                }} />
-            </div>
-
-            {/* Header */}
-            <div className="relative z-10 p-6 border-b border-slate-700 bg-slate-950/80 backdrop-blur-sm">
-                <div className="flex items-center justify-between">
-                    <button onClick={onBack} className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-colors">
-                        <ArrowLeft className="w-5 h-5" /> {t('shop.back')}
-                    </button>
-                    <h1 className="text-4xl font-bold text-cyan-400">{t('shop.title')}</h1>
-                    <div className="bg-yellow-500 text-slate-900 px-6 py-2 rounded-lg font-bold text-lg shadow-[0_0_15px_rgba(234,179,8,0.3)]">
-                        XP: {playerXP}
-                    </div>
+            <div className="relative z-10 p-6 border-b border-slate-700 bg-slate-950/90 backdrop-blur-md flex justify-between items-center">
+                <button onClick={onBack} className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-all border border-slate-600">
+                    <ArrowLeft className="w-5 h-5" /> {t('shop.back')}
+                </button>
+                <div className="text-center">
+                    <h1 className="text-3xl font-black text-cyan-400 italic tracking-tighter uppercase">Finance Shop</h1>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-[0.3em]">Baza Danych Zsynchronizowana</p>
+                </div>
+                <div className="bg-gradient-to-r from-yellow-500 to-amber-600 text-slate-900 px-6 py-2 rounded-xl font-black text-xl shadow-lg shadow-yellow-500/20">
+                    {playerXP} XP
                 </div>
             </div>
 
             {loading ? (
-                <div className="relative z-10 flex h-[calc(100%-100px)] items-center justify-center">
+                <div className="flex h-full items-center justify-center">
                     <Loader2 className="w-12 h-12 text-cyan-500 animate-spin" />
                 </div>
             ) : (
-                <div className="relative z-10 flex h-[calc(100%-100px)]">
+                <div className="relative z-10 flex h-[calc(100%-96px)]">
 
-                    {/* LEWA KOLUMNA (Twoje Karty) - 1/3 */}
-                    <div className="w-1/3 p-6 border-r border-slate-700 overflow-y-auto custom-scroll">
-                        <div className="flex items-center gap-2 mb-4 text-white">
-                            <ShieldCheck className="w-6 h-6 text-green-400" />
-                            <h2 className="text-2xl font-bold">{t('shop.yourCards')}</h2>
+                    {/* LEWA KOLUMNA: TWOJA TALIA (Z BACKENDU) */}
+                    <div className="w-1/3 p-6 border-r border-slate-800 bg-slate-950/40 overflow-y-auto custom-scroll">
+                        <div className="flex items-center gap-2 mb-6 border-b border-slate-800 pb-2">
+                            <ShieldCheck className="w-5 h-5 text-green-400" />
+                            <h2 className="text-xl font-bold text-white uppercase tracking-tight">Twoja Talia</h2>
                         </div>
                         <div className="space-y-3">
                             {ownedCards.map(card => (
                                 <CardListItem
-                                    key={card.id}
+                                    key={`owned-${card.id}`}
                                     card={card}
                                     selected={selectedCard === card.id && card.owned}
                                     onSelect={() => setSelectedCard(card.id)}
                                 />
                             ))}
                             {ownedCards.length === 0 && (
-                                <div className="text-slate-400 p-4 italic">{t('shop.noCardsOwned', 'Brak posiadanych kart.')}</div>
+                                <div className="text-slate-500 text-sm italic p-4 text-center">Brak posiadanych kart w bazie.</div>
                             )}
                         </div>
                     </div>
 
-                    {/* PRAWA KOLUMNA (Sklep lub Detale) - 2/3 */}
-                    <div className="w-2/3 p-6 overflow-y-auto custom-scroll">
+                    {/* PRAWA KOLUMNA: KATALOG / DETALE */}
+                    <div className="w-2/3 p-8 overflow-y-auto custom-scroll">
                         {selected ? (
-                            <div className="max-w-xl mx-auto animate-in fade-in slide-in-from-right-4 duration-300">
-                                <button onClick={() => setSelectedCard(null)} className="mb-4 text-cyan-400 hover:text-cyan-300 font-bold flex items-center gap-1">
-                                    ← {t('shop.backToStore', 'Back to Store')}
+                            <div className="max-w-2xl mx-auto animate-in slide-in-from-right-4 duration-300">
+                                <button onClick={() => setSelectedCard(null)} className="mb-6 text-cyan-400 font-bold flex items-center gap-2 hover:text-cyan-300 transition-colors">
+                                    ← Powrót do Sklepu
                                 </button>
                                 <CardDetailPanel
                                     card={selected}
@@ -166,23 +153,21 @@ export function CardShop({ onBack, playerXP, onPurchase }: CardShopProps) {
                                 />
                             </div>
                         ) : (
-                            <>
-                                <h2 className="text-2xl font-bold text-white mb-4">{t('shop.unlockNewCards')}</h2>
-                                <div className="grid grid-cols-2 gap-4">
+                            <div className="animate-in fade-in duration-500">
+                                <h2 className="text-2xl font-bold text-white mb-6 uppercase tracking-tight italic">Dostępne Inwestycje</h2>
+                                <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
                                     {lockedCards.map(card => (
                                         <LockedCardPreview
-                                            key={card.id}
+                                            key={`shop-${card.id}`}
                                             card={card}
                                             onSelect={() => setSelectedCard(card.id)}
                                         />
                                     ))}
-                                    {lockedCards.length === 0 && (
-                                        <div className="text-slate-400 col-span-2 p-4 text-center border border-dashed border-slate-700 rounded-xl">
-                                            {t('shop.allCardsUnlocked', 'Wszystkie karty zostały odblokowane!')}
-                                        </div>
-                                    )}
                                 </div>
-                            </>
+                                {lockedCards.length === 0 && (
+                                    <div className="text-slate-400 text-center py-20 italic font-bold">Wykupiłeś już wszystkie technologie!</div>
+                                )}
+                            </div>
                         )}
                     </div>
                 </div>
@@ -191,113 +176,98 @@ export function CardShop({ onBack, playerXP, onPurchase }: CardShopProps) {
     );
 }
 
-// --- POD-KOMPONENTY ---
+// --- SUB-KOMPONENTY ---
 
-function CardListItem({ card, selected, onSelect }: { card: Card; selected: boolean; onSelect: () => void }) {
-    const { t } = useTranslation();
+function CardListItem({ card, selected, onSelect }: any) {
+    const displayName = card.name.split('|')[0];
     return (
-        <button
-            onClick={onSelect}
-            className={`w-full p-3 rounded-xl transition-all border-2 text-left flex items-center gap-3 ${selected
-                    ? 'bg-cyan-500/10 border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.2)]'
-                    : 'bg-slate-800/40 border-slate-800 hover:border-slate-600'
-                }`}
-        >
-            <div className={`w-10 h-14 rounded bg-gradient-to-br ${card.color || 'from-slate-700 to-slate-800'} shrink-0`} />
-            <div className="min-w-0">
-                <div className="text-white font-bold text-sm truncate uppercase">
-                    {parseBackendTranslation(card.title) || card.title}
-                </div>
-                <div className="text-yellow-500 text-[10px] font-black uppercase tracking-wider">Level {card.level}</div>
+        <button onClick={onSelect} className={`w-full p-3 rounded-xl transition-all border-2 text-left flex items-center gap-3 ${selected ? 'bg-cyan-500/10 border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.2)]' : 'bg-slate-800/40 border-slate-800 hover:border-slate-700'
+            }`}>
+            <div className={`w-10 h-14 rounded bg-gradient-to-br ${card.color} shrink-0 shadow-inner`} />
+            <div className="min-w-0 flex-1">
+                <div className="text-white font-bold text-sm truncate uppercase italic">{displayName}</div>
+                <div className="text-cyan-500 text-[10px] font-black uppercase tracking-wider">Poziom {card.level}</div>
             </div>
+            {!card.upgradeToId && card.owned && <div className="text-[8px] bg-green-500/20 text-green-400 px-1 rounded border border-green-500/30">MAX</div>}
         </button>
     );
 }
 
-function LockedCardPreview({ card, onSelect }: { card: Card; onSelect: () => void }) {
-    const { t } = useTranslation();
+function LockedCardPreview({ card, onSelect }: any) {
+    const displayName = card.name.split('|')[0];
     return (
-        <button
-            onClick={onSelect}
-            className="group relative flex flex-col bg-slate-900/50 border-2 border-slate-800 rounded-2xl p-4 hover:border-yellow-500 transition-all hover:-translate-y-1 overflow-hidden"
-        >
-            <div className="absolute inset-0 bg-black/40 z-10 group-hover:bg-black/20 transition-colors" />
-            <div className="absolute top-2 right-2 z-20 bg-slate-950/80 p-1.5 rounded-full border border-slate-700">
-                <Lock className="w-4 h-4 text-yellow-500" />
+        <button onClick={onSelect} className="group relative flex flex-col bg-slate-900/40 border-2 border-slate-800 rounded-2xl p-4 hover:border-yellow-500/50 transition-all hover:-translate-y-1">
+            <div className="absolute top-3 right-3 z-20 bg-slate-950/80 p-1.5 rounded-full border border-slate-700 shadow-xl">
+                <Lock className="w-3 h-3 text-yellow-500" />
             </div>
-
-            <div className={`h-32 rounded-xl bg-gradient-to-br ${card.color || 'from-slate-700 to-slate-800'} mb-4 flex items-center justify-center text-4xl z-0 shadow-inner`}>
-                💰
-            </div>
-
-            <div className="text-left relative z-20">
-                <h3 className="text-white font-bold uppercase text-sm mb-1 truncate">
-                    {parseBackendTranslation(card.title) || card.title}
-                </h3>
-                <p className="text-slate-400 text-xs line-clamp-2 mb-3 h-8 leading-tight">
-                    {parseBackendTranslation(card.description) || card.description}
-                </p>
-                <div className="flex items-center justify-between mt-auto bg-slate-950/50 p-2 rounded-lg border border-slate-800">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase">Odblokuj</span>
-                    <span className="text-yellow-500 font-black">{card.unlockCost || 100} XP</span>
+            <div className={`h-32 rounded-xl bg-gradient-to-br ${card.color} mb-4 flex items-center justify-center text-4xl shadow-inner`}>💰</div>
+            <div className="text-left">
+                <h3 className="text-white font-bold uppercase text-xs mb-1 truncate">{displayName}</h3>
+                <div className="flex items-center justify-between mt-3 bg-black/40 p-2 rounded-lg border border-slate-800">
+                    <span className="text-yellow-500 font-black text-sm">{card.unlockCost || 100} XP</span>
                 </div>
             </div>
         </button>
     );
 }
 
-function CardDetailPanel({ card, playerXP, onUpgrade, onUnlock }: { card: Card; playerXP: number; onUpgrade: () => void; onUnlock: () => void }) {
-    const { t } = useTranslation();
-    const cardTypeDisplay = typeof card.type === 'object' && card.type !== null ? card.type.name : card.type;
+function CardDetailPanel({ card, playerXP, onUpgrade, onUnlock }: any) {
+    const displayName = card.name.split('|')[0];
+    const hasUpgrade = card.upgradeToId !== null && card.upgradeToId !== undefined;
+    const cardTypeDisplay = typeof card.type === 'object' ? card.type.name : card.type;
 
     return (
-        <div className="bg-slate-800/80 backdrop-blur-md rounded-2xl p-8 border-2 border-cyan-400 shadow-[0_0_30px_rgba(34,211,238,0.15)]">
-            <div className={`w-full h-64 rounded-2xl bg-gradient-to-br ${card.color || 'from-slate-500 to-slate-600'} mb-6 flex items-center justify-center shadow-lg relative overflow-hidden group`}>
-                <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className="text-center text-white relative z-10">
-                    <div className="text-7xl mb-4 drop-shadow-2xl">📱</div>
-                    <div className="text-3xl font-bold tracking-tight uppercase">
-                        {parseBackendTranslation(card.title) || card.title}
-                    </div>
+        <div className="bg-slate-800/80 backdrop-blur-xl rounded-3xl p-8 border-2 border-slate-700 shadow-2xl">
+            <div className={`w-full h-64 rounded-2xl bg-gradient-to-br ${card.color} mb-8 flex items-center justify-center shadow-[inset_0_0_40px_rgba(0,0,0,0.5)]`}>
+                <div className="text-center text-white">
+                    <div className="text-8xl mb-4 drop-shadow-2xl">📱</div>
+                    <div className="text-4xl font-black uppercase tracking-tighter italic">{displayName}</div>
                 </div>
             </div>
 
             <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4 text-left">
-                    <div className="p-3 bg-slate-900/50 rounded-xl border border-slate-700">
-                        <div className="text-slate-500 text-[10px] uppercase font-bold mb-1">{t('shop.type')}</div>
-                        <div className="text-cyan-400 text-sm font-black uppercase">{cardTypeDisplay}</div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-slate-950/50 p-4 rounded-xl border border-slate-800">
+                        <span className="text-slate-500 text-[10px] uppercase font-bold block mb-1">Typ</span>
+                        <span className="text-cyan-400 font-bold uppercase text-xs">{cardTypeDisplay || 'FINANSE'}</span>
                     </div>
-                    <div className="p-3 bg-slate-900/50 rounded-xl border border-slate-700">
-                        <div className="text-slate-500 text-[10px] uppercase font-bold mb-1">Poziom</div>
-                        <div className="text-yellow-500 text-sm font-black uppercase">Level {card.level}</div>
+                    <div className="bg-slate-950/50 p-4 rounded-xl border border-slate-800">
+                        <span className="text-slate-500 text-[10px] uppercase font-bold block mb-1">Status</span>
+                        <span className="text-white font-bold uppercase text-xs">LVL {card.level}</span>
                     </div>
                 </div>
 
-                <div className="text-left">
-                    <div className="text-slate-500 text-[10px] uppercase font-bold mb-1">{t('shop.description')}</div>
-                    <div className="text-white text-lg bg-slate-900/30 p-4 rounded-xl border border-slate-700/50">
-                        {parseBackendTranslation(card.description) || card.description}
-                    </div>
+                <div className="bg-slate-950/50 p-6 rounded-2xl border border-slate-800">
+                    <div className="text-slate-500 text-[10px] uppercase font-bold mb-2 tracking-widest">Możliwości Karty</div>
+                    <div className="text-white text-lg leading-relaxed">{card.description}</div>
                 </div>
 
                 {card.owned ? (
-                    <button
-                        onClick={onUpgrade}
-                        disabled={!card.upgradeCost || playerXP < card.upgradeCost}
-                        className="w-full px-6 py-4 bg-gradient-to-r from-green-500 to-green-600 disabled:from-slate-700 disabled:to-slate-800 text-white rounded-xl font-bold text-xl hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-2 shadow-lg shadow-green-900/20"
-                    >
-                        <TrendingUp className="w-6 h-6" />
-                        {t('shop.upgrade', { cost: card.upgradeCost || 100 })} XP
-                    </button>
+                    <div className="flex flex-col gap-4">
+                        {hasUpgrade ? (
+                            <button
+                                onClick={onUpgrade}
+                                disabled={playerXP < (card.upgradeCost || 100)}
+                                className="w-full py-5 bg-gradient-to-r from-green-600 to-emerald-600 disabled:from-slate-800 disabled:to-slate-900 text-white rounded-2xl font-black text-xl shadow-lg hover:scale-[1.02] transition-all flex items-center justify-center gap-3 border-t border-green-400/30"
+                            >
+                                <TrendingUp className="w-6 h-6" />
+                                ULEPSZ ZA {card.upgradeCost || 100} XP
+                            </button>
+                        ) : (
+                            <div className="w-full py-5 bg-slate-800/50 text-slate-500 rounded-2xl font-black text-xl flex items-center justify-center gap-3 border border-slate-700 italic uppercase">
+                                <CheckCircle2 className="w-6 h-6 text-green-500" />
+                                Poziom Maksymalny
+                            </div>
+                        )}
+                    </div>
                 ) : (
                     <button
                         onClick={onUnlock}
-                        disabled={!card.unlockCost || playerXP < card.unlockCost}
-                        className="w-full px-6 py-4 bg-gradient-to-r from-yellow-500 to-orange-600 disabled:from-slate-700 disabled:to-slate-800 text-white rounded-xl font-bold text-xl hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-2 shadow-lg shadow-yellow-900/20"
+                        disabled={playerXP < (card.unlockCost || 100)}
+                        className="w-full py-5 bg-gradient-to-r from-yellow-500 to-orange-600 disabled:from-slate-800 disabled:to-slate-900 text-white rounded-2xl font-black text-xl shadow-lg hover:scale-[1.02] transition-all flex items-center justify-center gap-3 border-t border-yellow-400/30"
                     >
                         <Lock className="w-6 h-6" />
-                        {t('shop.unlock', { cost: card.unlockCost || 100 })} XP
+                        ODBLOKUJ ZA {card.unlockCost || 100} XP
                     </button>
                 )}
             </div>
