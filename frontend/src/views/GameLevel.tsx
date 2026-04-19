@@ -43,6 +43,7 @@ export function GameLevel({ onBackToMenu }: { onBackToMenu: () => void }) {
   const [piles, setPiles] = useState({ drawCount: 0, discardCount: 0 });
   const [stats, setStats] = useState<BattleStats | null>(null);
   const [roomType, setRoomType] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // UI States
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -119,9 +120,9 @@ export function GameLevel({ onBackToMenu }: { onBackToMenu: () => void }) {
 
 // --- Action: End Turn (The Orchestrator) ---
 const handleEndTurn = async () => {
-  if (!stats?.player_turn || loading) return;
+  if (!stats?.player_turn || isSubmitting) return;
 
-  setLoading(true); // Prevent double-clicking
+  setIsSubmitting(true); // Prevent double-clicking
   try {
     const response = await fetch('/api/v1/adventures/end-turn', {
       method: 'POST',
@@ -144,7 +145,7 @@ const handleEndTurn = async () => {
   } catch (err) {
     console.error("End turn failed", err);
   } finally {
-    setLoading(false);
+    setIsSubmitting(false);
   }
 };
 
@@ -183,7 +184,7 @@ const handleEndTurn = async () => {
 
         <div className="flex flex-col gap-4 z-50">
           <button 
-            disabled={!selectedId || !stats.player_turn} 
+            disabled={!selectedId || !stats.player_turn || isSubmitting} 
             onClick={handlePlayCard}
             className="px-10 py-4 bg-green-500 disabled:bg-slate-800 text-slate-950 font-black rounded-full shadow-lg transition-all active:scale-95"
           >

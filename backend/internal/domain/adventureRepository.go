@@ -142,7 +142,7 @@ func (r *gormAdventureRepo) Create(adventure *models.Adventure) error {
 				fight := models.Fight{
 					EnemyID:             selectedEncounter.EnemyID,
 					PlayerTurn:          true,
-					DecisionPoints:      3, // Startowa mana/punkty akcji gracza
+					DecisionPoints:      2, // Startowa mana/punkty akcji gracza
 					CurrentPlayerHealth: adventure.PlayerHealth,
 
 					// Skoro pobraliśmy potwora (Preload), możemy przypisać mu startowe HP!
