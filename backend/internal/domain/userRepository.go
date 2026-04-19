@@ -67,7 +67,25 @@ func (r *gormUserRepo) BuyCard(userID uint, cardID uint) error {
 		if err := tx.Save(&user).Error; err != nil {
 			return err
 		}
-		return tx.Model(&user).Association("Cards").Append(&card)
+
+		// 4. Utwórz nową instancję UserCard
+		newUserCard := models.UserCard{
+			UserID: user.ID,
+			CardID: card.ID,
+		}
+
+		// 5. Zapisz nową instancję w bazie
+		// Możesz użyć Append jak wcześniej (ale przekazując newUserCard):
+		// return tx.Model(&user).Association("Cards").Append(&newUserCard)
+
+		// Albo, co jest często prostsze i bezpieczniejsze przy takich strukturach:
+		if err := tx.Create(&newUserCard).Error; err != nil {
+			return err
+		}
+
+		return nil
+
+		//return tx.Model(&user).Association("Cards").Append(&card)
 	})
 }
 func (r *gormUserRepo) Create(user *models.User) error {
