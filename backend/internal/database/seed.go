@@ -9,6 +9,17 @@ import (
 )
 
 func Seed(db *gorm.DB) error {
+	log.Println("Rozpoczynanie seedowania bazy danych edukacyjnej gry finansowej...")
+
+	// 1. Kategorie kart (TypeID) - MUSZĄ BYĆ ZDEFINIOWANE NA POCZĄTKU
+	cardTypes := []models.CardType{
+		{Name: "Finanse (Atak)"},          // index 0
+		{Name: "Bezpieczeństwo (Obrona)"}, // index 1
+		{Name: "Strategia (Utility)"},     // index 2
+	}
+	for i := range cardTypes {
+		db.Where("name = ?", cardTypes[i].Name).FirstOrCreate(&cardTypes[i])
+	}
 	// --- 2. DEFINICJA KART ULEPSZONYCH (LEVEL 2) ---
 	// Tworzymy je najpierw, żeby móc do nich referować
 	upgradedCards := []models.Card{
