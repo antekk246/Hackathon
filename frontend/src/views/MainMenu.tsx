@@ -8,11 +8,12 @@ import { handleLogout } from "../App";
 interface MainMenuProps {
   onStartGame: (difficulty: 'easy' | 'medium' | 'hard') => void;
   onOpenShop: () => void;
+  onShowTutorial: () => void;
   playerXP: number;
   isLoggedIn: boolean;
 }
 
-export function MainMenu({ onStartGame, onOpenShop, playerXP, isLoggedIn }: MainMenuProps) {
+export function MainMenu({ onStartGame, onOpenShop, onShowTutorial, playerXP, isLoggedIn }: MainMenuProps) {
   const { t, i18n } = useTranslation();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   
@@ -192,6 +193,7 @@ export function MainMenu({ onStartGame, onOpenShop, playerXP, isLoggedIn }: Main
       <SettingsModal 
         isOpen={isSettingsOpen} 
         onOpenChange={setIsSettingsOpen} 
+        onShowTutorial={onShowTutorial}
       />
     </div>
   );

@@ -1,13 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Zap, Trophy, Settings, Activity, Shield, Sword } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Zap, Settings, Shield, Sword } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { SettingsModal } from '../components/SettingsModal';
 import { 
-  CardPlayAnimation, 
-  CardFlipAnimation, 
-  DamageAnimation,
-  CardTravelingAnimation,
   DeckPile,
   DiscardPile
 } from '../components/BattleAnimations';
@@ -23,7 +19,9 @@ interface BackendCard {
   cost: number;
   type: string;
   effect_value: number;
-  color?: string; // Optional: can be mapped based on type
+  color?: string; 
+  titleKey?: string;
+  descriptionKey?: string;
 }
 
 interface BattleStats {
@@ -34,7 +32,14 @@ interface BattleStats {
   player_turn: boolean;
 }
 
-export function GameLevel({ onBackToMenu }: { onBackToMenu: () => void }) {
+interface GameLevelProps {
+  onEndTurn: () => void;
+  onBackToMenu: () => void;
+  onShowTutorial: () => void;
+  difficulty: 'easy' | 'medium' | 'hard';
+}
+
+export function GameLevel({ onBackToMenu, onShowTutorial }: GameLevelProps) {
   const { t } = useTranslation();
   const battle = useBattleTurn();
 
@@ -42,7 +47,6 @@ export function GameLevel({ onBackToMenu }: { onBackToMenu: () => void }) {
   const [hand, setHand] = useState<BackendCard[]>([]);
   const [piles, setPiles] = useState({ drawCount: 0, discardCount: 0 });
   const [stats, setStats] = useState<BattleStats | null>(null);
-  const [roomType, setRoomType] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // UI States
@@ -52,24 +56,32 @@ export function GameLevel({ onBackToMenu }: { onBackToMenu: () => void }) {
   const [isPlayerAttacking, setIsPlayerAttacking] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // --- Fetch Logic: The "Holy Sync" ---
+  // --- Fetch Logic ---
   const fetchBattleState = useCallback(async () => {
     try {
-      const response = await fetch('/api/v1/adventures/room/state', {
+      const response = await fetch('/api/v1/adventures/active', {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
+      if (!response.ok) throw new Error("Adventure not found");
+      
       const data = await response.json();
 
-      setHand(data.hand || []);
-      setPiles({
-        drawCount: data.draw?.length || 0,
-        discardCount: data.discard?.length || 0
+      setHand(data.cards || []);
+      setStats({
+        player_hp: data.player_health || 100,
+        enemy_hp: data.enemy_health || 50,
+        enemy_max_hp: 100,
+        mana: 3,
+        player_turn: true
       });
-      setStats(data.stats);
-      setRoomType(data.room_type);
-      setLoading(false);
+      setPiles({
+        drawCount: 5,
+        discardCount: 0
+      });
     } catch (err) {
-      console.error("Failed to sync with Holy Backend", err);
+      console.error("Failed to sync battle state:", err);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -79,122 +91,104 @@ export function GameLevel({ onBackToMenu }: { onBackToMenu: () => void }) {
 
   // --- Action: Play Card ---
   const handlePlayCard = async () => {
-    if (selectedId === null || !stats?.player_turn || stats.mana < 1) return;
+    if (selectedId === null || !stats?.player_turn || stats.mana < 1 || isSubmitting) return;
 
-    const card = hand.find(c => c.id === selectedId);
-    
+    setIsSubmitting(true);
     try {
-      // Trigger local "pre-hit" animation
-      if (card?.type === 'attack') setIsPlayerAttacking(true);
-
-      const response = await fetch(`/api/v1/adventures/play/${selectedId}`, {
+      const response = await fetch(`/api/v1/cards/${selectedId}/play`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
 
       if (response.ok) {
-        await battle.playCard(); // Visual hook
+        setIsPlayerAttacking(true);
+        await new Promise(r => setTimeout(r, 600));
+        setIsPlayerAttacking(false);
         setSelectedId(null);
-        await fetchBattleState(); // Sync resulting HP/Mana/Hand from DB
+        await fetchBattleState(); 
       }
-      setIsPlayerAttacking(false);
     } catch (err) {
-      alert("Terminal Link Error: Action Denied");
+      console.error("Card play failed", err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleStartTurn = async () => {
-  try {
-    const response = await fetch('/api/v1/adventures/start-turn', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    });
-    
-    if (response.ok) {
-      await fetchBattleState(); 
-    }
-  } catch (err) {
-    console.error("Start turn failed", err);
-  }
-};
+  const handleEndTurn = async () => {
+    if (!stats?.player_turn || isSubmitting) return;
 
-// --- Action: End Turn (The Orchestrator) ---
-const handleEndTurn = async () => {
-  if (!stats?.player_turn || isSubmitting) return;
-
-  setIsSubmitting(true); // Prevent double-clicking
-  try {
-    const response = await fetch('/api/v1/adventures/end-turn', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    });
-
-    if (response.ok) {
-      // 1. Show enemy attack animation
+    setIsSubmitting(true);
+    try {
       setIsEnemyAttacking(true);
-      
-      // 2. Local Delay: Let the player feel the hit
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
+      await new Promise(r => setTimeout(r, 800));
       setIsEnemyAttacking(false);
-      
-      // 3. Chain to Start Turn
-      // This is better than useEffect because it's an explicit sequence
-      await handleStartTurn();
+      await fetchBattleState();
+    } catch (err) {
+      console.error("End turn failed", err);
+    } finally {
+      setIsSubmitting(false);
     }
-  } catch (err) {
-    console.error("End turn failed", err);
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+  };
 
-  if (loading || !stats) return <div className="size-full bg-slate-950 flex items-center justify-center font-mono text-cyan-500 animate-pulse">SYNCHRONIZING_WITH_VAULT...</div>;
+  if (loading) return (
+    <div className="size-full bg-slate-950 flex flex-col items-center justify-center font-mono text-cyan-500">
+      <div className="animate-pulse text-2xl mb-4">SYNCHRONIZING_SYSTEM...</div>
+      <div className="w-64 h-2 bg-slate-800 rounded-full overflow-hidden">
+        <motion.div 
+          initial={{ width: 0 }}
+          animate={{ width: "100%" }}
+          transition={{ duration: 2, repeat: Infinity }}
+          className="h-full bg-cyan-500"
+        />
+      </div>
+    </div>
+  );
 
-  const isVictory = stats.enemy_hp <= 0;
+  if (!stats) return (
+    <div className="size-full bg-slate-950 flex flex-col items-center justify-center">
+      <h2 className="text-white text-2xl mb-4">No Active Adventure</h2>
+      <button onClick={onBackToMenu} className="px-8 py-3 bg-cyan-600 text-white rounded-full">Back to Menu</button>
+    </div>
+  );
 
   return (
     <div className="relative w-full h-full bg-slate-950 text-white overflow-hidden font-sans">
-      {/* 1. Dynamic Header */}
       <div className="absolute top-0 left-0 right-0 p-6 flex justify-between items-center z-40">
         <div className="flex items-center gap-4">
           <div className="bg-slate-900/80 px-4 py-2 rounded-xl border border-yellow-500/50 flex items-center gap-3">
             <Zap className={`w-6 h-6 ${stats.mana > 0 ? 'text-yellow-400' : 'text-slate-600'}`} fill="currentColor" />
             <span className="text-2xl font-black text-white">{stats.mana}</span>
           </div>
-          <div className="text-xs font-bold tracking-widest uppercase text-cyan-500">
-            {stats.player_turn ? "System_Active" : "Processing_Threat..."}
-          </div>
         </div>
+        
         <button onClick={() => setIsSettingsOpen(true)} className="p-3 bg-slate-900 rounded-full border border-slate-700 hover:border-cyan-400">
           <Settings className="w-5 h-5" />
         </button>
       </div>
 
-      {/* 2. Battle Stage */}
       <div className="absolute inset-0 flex items-center justify-around pb-64 px-10">
         <Entity 
           img={img} 
           hp={stats.player_hp} 
-          maxHp={900} // Backend base
-          label="USER_INTEGRITY" 
+          maxHp={900} 
+          label={t('gameLevel.you')} 
           isAttacking={isPlayerAttacking} 
           color="cyan" 
         />
 
-        <div className="flex flex-col gap-4 z-50">
+        <div className="flex flex-col gap-4 z-50 items-center">
           <button 
             disabled={!selectedId || !stats.player_turn || isSubmitting} 
             onClick={handlePlayCard}
-            className="px-10 py-4 bg-green-500 disabled:bg-slate-800 text-slate-950 font-black rounded-full shadow-lg transition-all active:scale-95"
+            className="px-10 py-4 bg-green-500 disabled:bg-slate-800 text-slate-950 font-black rounded-full shadow-lg transition-all active:scale-95 uppercase"
           >
-            EXECUTE_PROTOCOL
+            {t('cards.play', 'EXECUTE_PROTOCOL')}
           </button>
           <button 
             onClick={handleEndTurn}
-            className="px-8 py-2 bg-slate-900 border border-red-500/30 text-red-500 text-xs font-bold rounded-full"
+            className="px-8 py-2 bg-slate-900 border border-red-500/30 text-red-500 text-xs font-bold rounded-full hover:bg-red-500/10 transition-colors uppercase"
           >
-            END_CYCLE
+            {t('gameLevel.endTurn')}
           </button>
         </div>
 
@@ -202,18 +196,17 @@ const handleEndTurn = async () => {
           img={enemy1} 
           hp={stats.enemy_hp} 
           maxHp={stats.enemy_max_hp} 
-          label="MALWARE_NODE" 
+          label={t('gameLevel.scammer')} 
           isAttacking={isEnemyAttacking} 
           color="red" 
         />
       </div>
 
-      {/* 3. Cards UI - Hand is now mapped from Holy Backend */}
       <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-slate-950 to-transparent">
         <div className="flex justify-center items-end gap-2 max-w-5xl mx-auto h-48">
           {hand.map((card, idx) => (
             <CardInstance 
-              key={card.id} // instanceID from backend
+              key={card.id} 
               card={card}
               index={idx}
               total={hand.length}
@@ -224,31 +217,23 @@ const handleEndTurn = async () => {
         </div>
       </div>
 
-      {/* 4. Piles Sync */}
       <div className="absolute bottom-6 left-6 flex flex-col items-center gap-2">
         <DeckPile cardsRemaining={piles.drawCount} />
-        <span className="text-[10px] text-slate-500 font-bold uppercase">Buffer</span>
+        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Buffer</span>
       </div>
       <div className="absolute bottom-6 right-6 flex flex-col items-center gap-2">
         <DiscardPile cardsCount={piles.discardCount} />
-        <span className="text-[10px] text-slate-500 font-bold uppercase">Dump</span>
+        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Dump</span>
       </div>
 
-      {/* Victory Overlay */}
-      {isVictory && (
-        <div className="absolute inset-0 z-[100] bg-slate-950/90 backdrop-blur-xl flex flex-col items-center justify-center">
-          <Trophy className="w-20 h-20 text-yellow-400 mb-4" />
-          <h2 className="text-5xl font-black mb-8 italic">THREAT_NEUTRALIZED</h2>
-          <button onClick={onBackToMenu} className="px-12 py-4 bg-cyan-500 text-slate-950 font-bold rounded-full">CONTINUE_ADVENTURE</button>
-        </div>
-      )}
-
-      <SettingsModal isOpen={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
+      <SettingsModal 
+        isOpen={isSettingsOpen} 
+        onOpenChange={setIsSettingsOpen} 
+        onShowTutorial={onShowTutorial}
+      />
     </div>
   );
 }
-
-// --- Dynamic Sub-components ---
 
 function Entity({ img, hp, maxHp, label, isAttacking, color }: any) {
   const percent = Math.max(0, (hp / maxHp) * 100);
@@ -256,12 +241,12 @@ function Entity({ img, hp, maxHp, label, isAttacking, color }: any) {
     <div className="flex flex-col items-center gap-6">
       <motion.div 
         animate={isAttacking ? { x: color === 'cyan' ? 80 : -80, scale: 1.1 } : { x: 0, scale: 1 }}
-        className={`w-56 h-72 rounded-3xl border-4 ${color === 'cyan' ? 'border-cyan-500/30' : 'border-red-500/30'} bg-slate-900 shadow-2xl relative`}
+        className={`w-56 h-72 rounded-3xl border-4 ${color === 'cyan' ? 'border-cyan-500/30' : 'border-red-500/30'} bg-slate-900 shadow-2xl relative flex items-center justify-center`}
       >
         <img src={img} className={`w-full h-full object-contain p-6 ${hp <= 0 ? 'grayscale blur-sm' : ''}`} alt={label} />
       </motion.div>
       <div className="w-64">
-        <div className="flex justify-between text-[10px] font-black text-slate-400 mb-1 tracking-tighter">
+        <div className="flex justify-between text-[10px] font-black text-slate-400 mb-1 tracking-tighter uppercase">
           <span>{label}</span>
           <span>{hp} HP</span>
         </div>
@@ -277,6 +262,7 @@ function Entity({ img, hp, maxHp, label, isAttacking, color }: any) {
 }
 
 function CardInstance({ card, index, total, isSelected, onSelect }: any) {
+  const { t } = useTranslation();
   const rotation = (index - (total - 1) / 2) * 4;
   
   return (
@@ -295,8 +281,12 @@ function CardInstance({ card, index, total, isSelected, onSelect }: any) {
         <span className="text-[10px] font-bold">CP_{card.cost}</span>
       </div>
       <div className="p-2">
-        <div className="text-[10px] font-bold uppercase truncate">{card.title}</div>
-        <div className="text-[8px] text-slate-500 mt-1 line-clamp-3">{card.description}</div>
+        <div className="text-[10px] font-bold uppercase truncate">
+          {card.titleKey ? t(card.titleKey) : card.title}
+        </div>
+        <div className="text-[8px] text-slate-500 mt-1 line-clamp-3">
+          {card.descriptionKey ? t(card.descriptionKey) : card.description}
+        </div>
       </div>
       <div className="absolute bottom-2 right-2 text-[10px] font-black text-cyan-400">
         V_{card.effect_value}

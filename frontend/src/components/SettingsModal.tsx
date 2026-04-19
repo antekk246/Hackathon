@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { HelpCircle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -17,9 +18,10 @@ import { Label } from "./ui/label";
 interface SettingsModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  onShowTutorial?: () => void;
 }
 
-export function SettingsModal({ isOpen, onOpenChange }: SettingsModalProps) {
+export function SettingsModal({ isOpen, onOpenChange, onShowTutorial }: SettingsModalProps) {
   const { t, i18n } = useTranslation();
 
   const handleLanguageChange = (value: string) => {
@@ -34,7 +36,7 @@ export function SettingsModal({ isOpen, onOpenChange }: SettingsModalProps) {
             {t('settings.title')}
           </DialogTitle>
         </DialogHeader>
-        <div className="py-6 space-y-4">
+        <div className="py-6 space-y-6">
           <div className="flex flex-col gap-3">
             <Label htmlFor="language" className="text-blue-300 font-semibold">
               {t('settings.language')}
@@ -52,6 +54,24 @@ export function SettingsModal({ isOpen, onOpenChange }: SettingsModalProps) {
               </SelectContent>
             </Select>
           </div>
+
+          {onShowTutorial && (
+            <div className="flex flex-col gap-3">
+              <Label className="text-blue-300 font-semibold">
+                {t('gameLevel.guide')}
+              </Label>
+              <button
+                onClick={() => {
+                  onShowTutorial();
+                  onOpenChange(false);
+                }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-slate-800 border-2 border-blue-500/30 rounded-lg hover:border-cyan-400 hover:bg-slate-700 transition-all text-white font-bold"
+              >
+                <HelpCircle className="w-5 h-5 text-cyan-400" />
+                {t('gameLevel.guide')}
+              </button>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

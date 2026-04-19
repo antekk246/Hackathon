@@ -43,12 +43,6 @@ export default function App() {
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
-        const token = params.get('token');
-        if (token) {
-            localStorage.setItem('token', token);
-            setIsLoggedIn(true);
-            window.history.replaceState({}, document.title, "/");
-        }
         const tokenFromUrl = params.get('token');
 
         const activeToken = tokenFromUrl || localStorage.getItem('token');
@@ -58,24 +52,8 @@ export default function App() {
         }
 
         if (activeToken) {
-            gameApi.getUserCards()
-                .then(setUserCards)
-                .catch((err) => {
-                    console.error("Sesja wygasła lub błąd sieci:", err);
-                });
-        }
-
-        const seen = localStorage.getItem('hasSeenTutorial');
-        if (seen === 'true') {
-            setHasSeenTutorial(true);
-        }
-
-        if (localStorage.getItem('token')) {
-            gameApi.getUserCards().then(setUserCards).catch(console.error);
-        }
-        if (activeToken) {
             setIsLoggedIn(true);
-
+            
             gameApi.getUserProfile()
                 .then(user => {
                     setPlayerXP(user.money);
@@ -86,6 +64,11 @@ export default function App() {
                 });
 
             gameApi.getUserCards().then(setUserCards).catch(console.error);
+        }
+
+        const seen = localStorage.getItem('hasSeenTutorial');
+        if (seen === 'true') {
+            setHasSeenTutorial(true);
         }
     }, []);
 
@@ -110,20 +93,25 @@ export default function App() {
 
     const handleTutorialNext = () => {
         if (tutorialStep === 7) {
-            setShowTutorial(false);
-            setHasSeenTutorial(true);
-            localStorage.setItem('hasSeenTutorial', 'true');
-            setGameState('selection');
+            finishTutorial();
         } else {
             setTutorialStep(tutorialStep + 1);
         }
     };
 
     const handleTutorialClose = () => {
+        finishTutorial();
+    };
+
+    const finishTutorial = () => {
         setShowTutorial(false);
         setHasSeenTutorial(true);
         localStorage.setItem('hasSeenTutorial', 'true');
-        setGameState('selection');
+        // Jeśli tutorial był uruchomiony przy starcie gry (z menu), przejdź do wyboru kart.
+        // Jeśli był uruchomiony w trakcie gry (game), zostań w grze.
+        if (gameState === 'menu') {
+            setGameState('selection');
+        }
     };
 
     const handleConfirmSelection = async (selectedCards: Card[]) => {
@@ -150,6 +138,10 @@ export default function App() {
                     isLoggedIn={isLoggedIn}
                     onStartGame={handleStartGame}
                     onOpenShop={() => setGameState('shop')}
+                    onShowTutorial={() => {
+                        setShowTutorial(true);
+                        setTutorialStep(0);
+                    }}
                     playerXP={playerXP}
                 />
             )}
