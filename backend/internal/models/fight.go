@@ -18,6 +18,7 @@ type Fight struct {
 
 	// ZDROWIE: Aktualny stan gracza i wroga
 	CurrentPlayerHealth uint `json:"currentPlayerHealth"`
+	CurrentPlayerShield uint `json:"currentPlayerShield"` // Nowa wartość dla tarczy
 	CurrentEnemyHealth  uint `json:"currentEnemyHealth"`
 	MaxEnemyHealth      uint `json:"maxEnemyHealth"`
 
