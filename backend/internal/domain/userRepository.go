@@ -40,32 +40,34 @@ func (r *gormUserRepo) GetByOAuthID(oauthID string) (*models.User, error) {
 	}
 	return &user, nil
 }
-func (r *gormUserRepo) BuyCard(userID uint, cardID uint) error {
-	return r.DB.Transaction(func(tx *gorm.DB) error {
-		var user models.User
-		var card models.Card
+func (r *UserRepository) BuyCard(userID uint, cardID uint) error {
+    return r.db.Transaction(func(tx *gorm.DB) error {
+        var user models.User
+        var card models.Card
 
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&user, userID).Error; err != nil {
-			return err
-		}
-		if err := tx.First(&card, cardID).Error; err != nil {
-			return err
-		}
+        // 1. Pobierz usera i kartę z bazy
+        if err := tx.First(&user, userID).Error; err != nil {
+            return err
+        }
+        if err := tx.First(&card, cardID).Error; err != nil {
+            return err
+        }
 
-		if user.Money < card.UpgradeCost { // Or card.Price
-			return fmt.Errorf("insufficient funds")
-		}
+        // 2. Cena (możesz użyć UpgradeCost z karty jako ceny zakupu)
+        cost := uint(100) 
+        if card.UpgradeCost > 0 { cost = card.UpgradeCost }
 
-		// 1. Deduct Money
-		tx.Model(&user).Update("money", user.Money-card.UpgradeCost)
+        if user.Money < cost {
+            return errors.New("brak wystarczającej ilości XP")
+        }
 
-		// 2. Add a NEW instance to the inventory
-		userCard := models.UserCard{
-			UserID: userID,
-			CardID: cardID,
-		}
-		return tx.Create(&userCard).Error
-	})
+        // 3. Odejmij pieniądze w bazie
+        user.Money -= cost
+        if err := tx.Save(&user).Error; err != nil {
+            return err
+        }
+        return tx.Model(&user).Association("Cards").Add(&card)
+    })
 }
 func (r *gormUserRepo) Create(user *models.User) error {
 	return r.DB.Transaction(func(tx *gorm.DB) error {
