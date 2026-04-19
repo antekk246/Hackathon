@@ -314,10 +314,8 @@ func (h *AdventureHandler) GetFullBattleState(c *gin.Context) {
 }
 func (h *AdventureHandler) PlayCard(c *gin.Context) {
 	userID := c.MustGet("userID").(uint)
-	// instanceID refers to the specific card being played from the hand
 	instanceID, _ := strconv.ParseUint(c.Param("instanceID"), 10, 32)
 
-	// 1. Fetch the current game state
 	adv, err := h.Repo.GetByUserID(userID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "No active adventure"})
@@ -330,57 +328,107 @@ func (h *AdventureHandler) PlayCard(c *gin.Context) {
 		return
 	}
 
-	// 2. Validate Turn and Action Points
-	if !room.Fight.PlayerTurn || room.Fight.DecisionPoints < 1 {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Cannot act: Out of points or not your turn"})
-		return
-	}
-
-	// 3. Get Card metadata to know what the action is
+	// 1. Pobierz metadane karty
 	card, err := h.CardRepo.GetByID(uint(instanceID))
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Card data missing"})
 		return
 	}
 
-	// 4. Parse the Action JSON
-	var actionData map[string]interface{}
-	json.Unmarshal(card.CardAction, &actionData)
-	actionType, _ := actionData["action"].(string)
-	val, _ := actionData["value"].(float64)
-
-	// 5. Execute Action switch
-	switch actionType {
-	case "attack":
-		damage := uint(val)
-		if damage >= room.Fight.CurrentEnemyHealth {
-			room.Fight.CurrentEnemyHealth = 0
-		} else {
-			room.Fight.CurrentEnemyHealth -= damage
-		}
-	case "defend":
-		// Simply cast val to uint for the player's "Cushion"
-		room.Fight.CurrentPlayerHealth += uint(val)
-	case "draw":
-		h.handleDraw(room.Fight, int(val))
+	// 2. Sparsuj JSON akcji
+	var action map[string]interface{}
+	if err := json.Unmarshal(card.CardAction, &action); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid card action format"})
+		return
 	}
 
-	// 6. Finalize: Deduct point and move card to discard pile
-	room.Fight.DecisionPoints -= 1
+	// 3. --- WALIDACJA KOSZTU (Naprawa błędu z energią) ---
+	cardCost := 1 // domyślnie 1
+	if customCost, ok := action["cost"].(float64); ok {
+		cardCost = int(customCost)
+	}
+
+	if room.Fight.DecisionPoints < uint(cardCost) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Not enough energy to play this card"})
+		return
+	}
+
+	if !room.Fight.PlayerTurn {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Not your turn"})
+		return
+	}
+
+	// 4. --- LOGIKA OBRAŻEŃ (Naprawa zadawania damage) ---
+	actionType, _ := action["action"].(string)
+
+	switch actionType {
+	case "damage":
+		// Ważne: GORM/JSON używa float64 dla liczb, trzeba rzutować na uint
+		if val, ok := action["value"].(float64); ok {
+			h.applyDamage(room.Fight, uint(val))
+		}
+
+	case "block":
+		if val, ok := action["value"].(float64); ok {
+			room.Fight.CurrentPlayerShield += uint(val)
+		}
+
+	case "draw":
+		if val, ok := action["value"].(float64); ok {
+			h.handleDraw(room.Fight, int(val))
+		}
+
+	case "multi":
+		// Obsługa hybryd: damage, block, energy
+		if dmg, ok := action["dmg"].(float64); ok { // sprawdzamy klucz 'dmg' ze starszego seeda
+			h.applyDamage(room.Fight, uint(dmg))
+		} else if dmg2, ok := action["damage"].(float64); ok { // lub 'damage' z nowszego
+			h.applyDamage(room.Fight, uint(dmg2))
+		}
+		
+		if blk, ok := action["block"].(float64); ok {
+			room.Fight.CurrentPlayerShield += uint(blk)
+		}
+		
+		if eng, ok := action["energy"].(float64); ok {
+			room.Fight.DecisionPoints += uint(eng)
+		}
+
+	case "execute":
+		if val, ok := action["value"].(float64); ok {
+			enemyBefore := room.Fight.CurrentEnemyHealth
+			h.applyDamage(room.Fight, uint(val))
+			if enemyBefore > 0 && room.Fight.CurrentEnemyHealth == 0 {
+				h.handleDraw(room.Fight, 1)
+			}
+		}
+	}
+
+	// 5. Finalizacja
+	room.Fight.DecisionPoints -= uint(cardCost)
 	h.moveCardToDiscard(room.Fight, uint(instanceID))
 
-	// 7. Save changes
 	if err := h.RoomRepo.UpdateFight(room.Fight); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save turn"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"status":    "success",
-		"enemy_hp":  room.Fight.CurrentEnemyHealth,
-		"player_hp": room.Fight.CurrentPlayerHealth,
-		"actions":   room.Fight.DecisionPoints,
+		"status":        "success",
+		"enemy_hp":      room.Fight.CurrentEnemyHealth,
+		"player_hp":     room.Fight.CurrentPlayerHealth,
+		"player_shield": room.Fight.CurrentPlayerShield,
+		"actions":       room.Fight.DecisionPoints,
 	})
+}
+
+// Funkcja pomocnicza dla czytelności kodu
+func (h *AdventureHandler) applyDamage(fight *models.Fight, damage uint) {
+	if damage >= fight.CurrentEnemyHealth {
+		fight.CurrentEnemyHealth = 0
+	} else {
+		fight.CurrentEnemyHealth -= damage
+	}
 }
 func (h *AdventureHandler) moveCardToDiscard(fight *models.Fight, cardID uint) {
 	var hand []uint
