@@ -138,7 +138,7 @@ func (r *gormCardRepo) UpgradeCardInstance(userID uint, instanceID uint) error {
 			return fmt.Errorf("błąd podczas pobierania opłaty: %w", err)
 		}
 
-		if err := tx.Model(&userCard).Update("CardID", *userCard.Card.UpgradeToID).Error; err != nil {
+		if err := tx.Model(&models.UserCard{}).Where("id = ?", instanceID).Update("card_id", *userCard.Card.UpgradeToID).Error; err != nil {
 			return fmt.Errorf("błąd podczas ewolucji karty: %w", err)
 		}
 
