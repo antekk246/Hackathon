@@ -4,6 +4,7 @@ import (
 	"backend/internal/models"
 	"errors"
 	"fmt"
+	"log"
 
 	"gorm.io/gorm"
 )
@@ -105,11 +106,11 @@ func (r *gormCardRepo) UpgradeCardInstance(userID uint, instanceID uint) error {
 		//}
 
 		// Zmień ten fragment w UpgradeCardInstance:
-		if err := tx.Preload("Card.UpgradeTo").Where("id = ? AND user_id = ?", instanceID, userID).First(&userCard).Error; err != nil {
+		if err := tx.Preload("Card").Where("id = ? AND user_id = ?", instanceID, userID).First(&userCard).Error; err != nil {
 			// Sprawdzamy, czy to faktycznie brak rekordu, czy inny błąd (np. błąd SQL lub relacji)
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				// Możesz dodać logowanie, żeby zobaczyć jakich ID szukał:
-				errors.New("Nie znaleziono karty instancji! Szukano: instanceID= " + fmt.Sprint(instanceID) + " userID=" + fmt.Sprint(userID))
+				log.Printf("Nie znaleziono karty instancji! Szukano: instanceID= %d userID= %d", instanceID, userID)
 				return errors.New("card instance not found or doesn't belong to you")
 			}
 			// Jeśli to inny błąd GORMa (np. problem z Preload), zwróćmy go, żeby go zobaczyć!
@@ -117,21 +118,36 @@ func (r *gormCardRepo) UpgradeCardInstance(userID uint, instanceID uint) error {
 		}
 
 		if userCard.Card.UpgradeToID == nil {
+			log.Printf("[UPGRADE] Karta %s (instance: %d) ma już maksymalny poziom.", userCard.Card.Name, instanceID)
 			return errors.New("this card is already max level")
 		}
 
 		// 2. Check User Money
 		var user models.User
+		if err := tx.First(&user, userID).Error; err != nil {
+			return errors.New("nie udało się pobrać danych gracza")
+		}
+
 		tx.First(&user, userID)
 		if user.Money < userCard.Card.UpgradeCost {
 			return errors.New("poor gamer alert: insufficient funds")
 		}
 
-		// 3. Process Upgrade
-		tx.Model(&user).Update("money", user.Money-userCard.Card.UpgradeCost)
+		// 3. Deduct Money and Upgrade the Card
+		if err := tx.Model(&user).Update("Money", user.Money-userCard.Card.UpgradeCost).Error; err != nil {
+			return fmt.Errorf("błąd podczas pobierania opłaty: %w", err)
+		}
+
+		if err := tx.Model(&userCard).Update("CardID", *userCard.Card.UpgradeToID).Error; err != nil {
+			return fmt.Errorf("błąd podczas ewolucji karty: %w", err)
+		}
+
+		log.Printf("✅ [UPGRADE] Sukces! Gracz %d ulepszył instancję %d z karty bazowej ID %d na kartę bazową ID %d",
+			userID, instanceID, userCard.CardID, *userCard.Card.UpgradeToID)
 
 		// Just update the CardID on this specific instance row!
-		return tx.Model(&userCard).Update("card_id", *userCard.Card.UpgradeToID).Error
+		//return tx.Model(&userCard).Update("card_id", *userCard.Card.UpgradeToID).Error
+		return nil
 	})
 }
 func (r *gormCardRepo) VerifyUserOwnsCards(userID uint, cardIDs []uint) error {
