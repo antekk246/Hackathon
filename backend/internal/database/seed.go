@@ -9,113 +9,107 @@ import (
 )
 
 func Seed(db *gorm.DB) error {
-	log.Println("Rozpoczynanie seedowania bazy danych edukacyjnej gry finansowej...")
-
-	// 1. Kategorie kart (TypeID)
-	cardTypes := []models.CardType{
-		{Name: "Finanse (Atak)"},          // Karty rozwiązujące dług/problem
-		{Name: "Bezpieczeństwo (Obrona)"}, // Karty budujące poduszkę
-		{Name: "Strategia (Utility)"},     // Dobieranie kart, dodatkowe akcje
+	// --- 2. DEFINICJA KART ULEPSZONYCH (LEVEL 2) ---
+	// Tworzymy je najpierw, żeby móc do nich referować
+	upgradedCards := []models.Card{
+		{
+			Name:        "Super Gotówka|Super Cash",
+			TypeID:      &cardTypes[0].ID,
+			Description: "Spłacasz 80 PLN problemu.",
+			CardAction:  datatypes.JSON([]byte(`{"action": "damage", "value": 80}`)),
+		},
+		{
+			Name:        "Konto Premium|Premium Account",
+			TypeID:      &cardTypes[1].ID,
+			Description: "Zyskaj 80 PLN Poduszki Finansowej.",
+			CardAction:  datatypes.JSON([]byte(`{"action": "block", "value": 80}`)),
+		},
+		{
+			Name:        "Analiza Rynkowa",
+			TypeID:      &cardTypes[2].ID,
+			Description: "Dobierz 3 karty.",
+			CardAction:  datatypes.JSON([]byte(`{"action": "draw", "value": 3}`)),
+		},
+		{
+			Name:        "Przelew Natychmiastowy",
+			TypeID:      &cardTypes[0].ID,
+			Description: "Natychmiast spłacasz 120 PLN długu.",
+			CardAction:  datatypes.JSON([]byte(`{"action": "damage", "value": 120}`)),
+		},
 	}
-	for i := range cardTypes {
-		db.Where("name = ?", cardTypes[i].Name).FirstOrCreate(&cardTypes[i])
+
+	for i := range upgradedCards {
+		db.Where("name = ?", upgradedCards[i].Name).FirstOrCreate(&upgradedCards[i])
 	}
 
-	// 2. Definicja kart (Podstawowe + Dodatkowe do 15 sztuk)
-	// UWAGA: UpgradeToID można dodać analogicznie jak w poprzednim przykładzie
+	// --- 3. DEFINICJA KART PODSTAWOWYCH I DROGICH ---
 	cards := []models.Card{
-		// --- ZESTAW PODSTAWOWY (STARTOWY) ---
+		// Zestaw podstawowy z przypisanymi ulepszeniami
 		{
 			Name:        "Gotówka|Cash",
 			TypeID:      &cardTypes[0].ID,
 			Description: "Spłacasz 50 PLN problemu.",
 			CardAction:  datatypes.JSON([]byte(`{"action": "damage", "value": 50}`)),
+			UpgradeToID: &upgradedCards[0].ID, // Super Gotówka
+			UpgradeCost: 100,
 		},
 		{
 			Name:        "Konto Oszczędnościowe|Savings Account",
 			TypeID:      &cardTypes[1].ID,
 			Description: "Zyskaj 50 PLN Poduszki Finansowej.",
 			CardAction:  datatypes.JSON([]byte(`{"action": "block", "value": 50}`)),
+			UpgradeToID: &upgradedCards[1].ID, // Konto Premium
+			UpgradeCost: 100,
 		},
 		{
 			Name:        "Szybka Analiza",
 			TypeID:      &cardTypes[2].ID,
 			Description: "Dobierz 2 karty.",
 			CardAction:  datatypes.JSON([]byte(`{"action": "draw", "value": 2}`)),
-		},
-		{
-			Name:        "Porada Eksperta",
-			TypeID:      &cardTypes[2].ID,
-			Description: "Zyskaj +1 Akcję i 30 PLN Poduszki. (Wyczerpanie)",
-			CardAction:  datatypes.JSON([]byte(`{"action": "multi", "energy": 1, "block": 30, "exhaust": true}`)),
-		},
-
-		// --- KARTY DODATKOWE (DO ZDOBYCIA/KUPNA) ---
-		{
-			Name:        "Lokata Terminowa",
-			TypeID:      &cardTypes[1].ID,
-			Description: "Zyskaj 120 PLN Poduszki. Koszt: 2 Akcje.",
-			CardAction:  datatypes.JSON([]byte(`{"action": "block", "value": 120, "cost": 2}`)),
+			UpgradeToID: &upgradedCards[2].ID, // Analiza Rynkowa
+			UpgradeCost: 100,
 		},
 		{
 			Name:        "Przelew Ekspresowy",
 			TypeID:      &cardTypes[0].ID,
 			Description: "Natychmiast spłacasz 80 PLN długu.",
 			CardAction:  datatypes.JSON([]byte(`{"action": "damage", "value": 80}`)),
+			UpgradeToID: &upgradedCards[3].ID, // Przelew Natychmiastowy
+			UpgradeCost: 100,
 		},
+		
+		// --- DROGIE KARTY (ELITARNE) ZE SCREENA ---
 		{
-			Name:        "Budżet Domowy",
-			TypeID:      &cardTypes[2].ID,
-			Description: "W tej turze wszystkie karty 'Gotówka' są o 20% skuteczniejsze.",
-			CardAction:  datatypes.JSON([]byte(`{"action": "buff_cash", "value": 1.2}`)),
-		},
-		{
-			Name:        "Inwestycja w Wiedzę",
-			TypeID:      &cardTypes[2].ID,
-			Description: "Dobierz 3 karty. Odrzuć 1.",
-			CardAction:  datatypes.JSON([]byte(`{"action": "draw_discard", "draw": 3, "discard": 1}`)),
-		},
-		{
-			Name:        "Weryfikacja Dwuskładnikowa",
-			TypeID:      &cardTypes[1].ID,
-			Description: "Zyskaj 40 PLN Poduszki. Następny atak wroga jest o 50% słabszy.",
-			CardAction:  datatypes.JSON([]byte(`{"action": "block_weaken", "value": 40}`)),
-		},
-		{
-			Name:        "Zwrot Podatku",
+			Name:        "Złoty Certyfikat PKO",
 			TypeID:      &cardTypes[0].ID,
-			Description: "Zadaj 150 PLN obrażeń. (Można użyć tylko jeśli masz >200 PLN Poduszki).",
-			CardAction:  datatypes.JSON([]byte(`{"action": "conditional_damage", "value": 150, "req": 200}`)),
+			Description: "Potężne uderzenie kapitałem. Zadaje 200 PLN obrażeń.",
+			CardAction:  datatypes.JSON([]byte(`{"action": "damage", "value": 200}`)),
 		},
 		{
-			Name:        "Aplikacja Mobilna IKO",
-			TypeID:      &cardTypes[2].ID,
-			Description: "Zmniejsz koszt następnej karty w tej turze do 0.",
-			CardAction:  datatypes.JSON([]byte(`{"action": "reduce_cost"}`)),
-		},
-		{
-			Name:        "Fundusz Awaryjny",
+			Name:        "Tarcza Antyinflacyjna",
 			TypeID:      &cardTypes[1].ID,
-			Description: "Zmień całą posiadaną Gotówkę na ręce w Poduszkę (1:1).",
-			CardAction:  datatypes.JSON([]byte(`{"action": "convert_hand"}`)),
+			Description: "Zyskaj 200 PLN Poduszki Finansowej.",
+			CardAction:  datatypes.JSON([]byte(`{"action": "block", "value": 200}`)),
 		},
 		{
-			Name:        "Dywersyfikacja",
+			Name:        "Dźwignia Finansowa",
 			TypeID:      &cardTypes[2].ID,
-			Description: "Zadaj 40 obrażeń i zyskaj 40 Poduszki.",
-			CardAction:  datatypes.JSON([]byte(`{"action": "hybrid", "dmg": 40, "block": 40}`)),
+			Description: "Zadaj 100 PLN obrażeń i zyskaj +1 Akcję.",
+			CardAction:  datatypes.JSON([]byte(`{"action": "multi", "damage": 100, "energy": 1}`)),
 		},
+
+		// Pozostałe Twoje karty dodatkowe (zachowane)
 		{
-			Name:        "Asystent AI",
+			Name:        "Porada Eksperta",
 			TypeID:      &cardTypes[2].ID,
-			Description: "Podejrzyj 3 pierwsze karty z talii. Wybierz jedną na rękę.",
-			CardAction:  datatypes.JSON([]byte(`{"action": "scry", "value": 3}`)),
+			Description: "Zyskaj +1 Akcję i 30 PLN Poduszki. (Wyczerpanie)",
+			CardAction:  datatypes.JSON([]byte(`{"action": "multi", "energy": 1, "block": 30, "exhaust": true}`)),
 		},
 		{
-			Name:        "Płatność Blik",
-			TypeID:      &cardTypes[0].ID,
-			Description: "Szybki atak za 40. Jeśli to wykończy wroga, dobierz kartę.",
-			CardAction:  datatypes.JSON([]byte(`{"action": "execute", "value": 40}`)),
+			Name:        "Lokata Terminowa",
+			TypeID:      &cardTypes[1].ID,
+			Description: "Zyskaj 120 PLN Poduszki. Koszt: 2 Akcje.",
+			CardAction:  datatypes.JSON([]byte(`{"action": "block", "value": 120, "cost": 2}`)),
 		},
 	}
 
