@@ -45,6 +45,8 @@ func main() {
 	// --- DODAJ TO: Czyszczenie bazy danych na starcie ---
 	log.Println("Czyszczenie bazy danych (Drop Tables)...")
 	err = db.Migrator().DropTable(
+		"adventure_cards", // many 2 many
+		"adventure_buffs",
 		&models.UserCard{}, // Najpierw tabele łączące (FK)
 		&models.Fight{},
 		&models.Room{},

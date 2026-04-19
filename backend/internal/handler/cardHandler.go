@@ -40,7 +40,8 @@ func (h *CardHandler) GetUserCards(c *gin.Context) {
 		return
 	}
 
-	cards, err := h.CardRepo.GetByUserID(userID.(uint))
+	//cards, err := h.CardRepo.GetByUserID(userID.(uint))
+	cards, err := h.CardRepo.GetUserCards(userID.(uint)) // This returns []UserCard with preloaded Card data
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user cards"})
 		return

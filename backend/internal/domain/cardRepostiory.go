@@ -13,6 +13,7 @@ type CardRepository interface {
 	GetByID(id uint) (*models.Card, error)
 	GetByIDs(ids []uint) ([]models.Card, error)
 	GetByUserID(userID uint) ([]models.Card, error)
+	GetUserCards(userID uint) ([]models.UserCard, error)
 	GetByAdventureID(adventureID uint, userID uint) ([]models.Card, error)
 	UpgradeCardInstance(userID uint, instanceID uint) error
 	VerifyUserOwnsCards(userID uint, cardIDs []uint) error
@@ -69,6 +70,15 @@ func (r *gormCardRepo) GetByUserID(userID uint) ([]models.Card, error) {
 		Preload("Type").
 		Find(&cards).Error
 	return cards, err
+}
+
+func (r *gormCardRepo) GetUserCards(userID uint) ([]models.UserCard, error) {
+	var userCards []models.UserCard
+
+	// Używamy Preload, aby GORM od razu zaciągnął dane archetypu do pola "Card"
+	err := r.DB.Preload("Card").Where("user_id = ?", userID).Find(&userCards).Error
+
+	return userCards, err
 }
 
 func (r *gormCardRepo) GetByAdventureID(adventureID uint, userID uint) ([]models.Card, error) {
