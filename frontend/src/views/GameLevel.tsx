@@ -290,30 +290,49 @@ function Entity({ img, hp, maxHp, shield = 0, label, isAttacking, color }: any) 
 }
 
 function CardInstance({ card, index, total, isSelected, onSelect }: any) {
-  const rotation = (index - (total - 1) / 2) * 4;
-  
-  return (
-    <motion.div
-      animate={{ 
-        rotate: isSelected ? 0 : rotation,
-        y: isSelected ? -80 : 0,
-        zIndex: isSelected ? 50 : index
-      }}
-      onClick={onSelect}
-      className={`relative w-32 h-48 rounded-xl border-2 transition-all cursor-pointer bg-slate-900 overflow-hidden
-        ${isSelected ? 'border-white' : 'border-slate-700'}`}
-    >
-      <div className={`h-1/3 p-2 bg-gradient-to-br ${card.type === 'attack' ? 'from-red-600 to-red-900' : 'from-blue-600 to-blue-900'} flex justify-between`}>
-        {card.type === 'attack' ? <Sword size={14} /> : <Shield size={14} />}
-        <span className="text-[10px] font-bold">CP_{card.cost}</span>
-      </div>
-      <div className="p-2">
-        <div className="text-[10px] font-bold uppercase truncate">{card.title}</div>
-        <div className="text-[8px] text-slate-500 mt-1 line-clamp-3">{card.description}</div>
-      </div>
-      <div className="absolute bottom-2 right-2 text-[10px] font-black text-cyan-400">
-        V_{card.effect_value}
-      </div>
-    </motion.div>
-  );
+    const rotation = (index - (total - 1) / 2) * 4;
+
+    // 1. Zabezpieczenie nazw z bazy danych (Go używa dużych liter lub oryginalnych tagów JSON)
+    const rawName = card.Name || card.name || "Brak Danych";
+    const displayName = rawName.split('|')[0]; // Obsługa "Gotówka|Cash"
+    const desc = card.Description || card.description || "";
+
+    // 2. Wyciągnięcie wartości z JSONa CardAction
+    let action: any = {};
+    try {
+        const actionStr = card.CardAction || card.cardAction;
+        action = typeof actionStr === 'string' ? JSON.parse(actionStr) : (actionStr || {});
+    } catch (e) { }
+
+    const cost = action.cost || 1; // Domyślny koszt 1
+    const val = action.value || action.damage || action.dmg || action.block || 0;
+
+    // Rozpoznawanie typu do kolorowania kart (atak = czerwony, reszta = niebieski)
+    const isAttack = action.action === 'damage' || action.action === 'execute' || action.action === 'multi';
+
+    return (
+        <motion.div
+            animate={{
+                rotate: isSelected ? 0 : rotation,
+                y: isSelected ? -30 : 0, // Karta lekko się wysuwa
+                scale: isSelected ? 1.05 : 1,
+                zIndex: isSelected ? 50 : index
+            }}
+            onClick={onSelect}
+            className={`relative w-32 h-48 rounded-xl border-2 transition-all cursor-pointer bg-slate-900 overflow-hidden shadow-2xl
+        ${isSelected ? 'border-cyan-400 shadow-cyan-500/50' : 'border-slate-700 hover:border-slate-500'}`}
+        >
+            <div className={`h-1/3 p-2 bg-gradient-to-br ${isAttack ? 'from-red-600 to-red-900' : 'from-blue-600 to-blue-900'} flex justify-between text-white shadow-inner`}>
+                {isAttack ? <Sword size={14} /> : <Shield size={14} />}
+                <span className="text-[10px] font-black">CP_{cost}</span>
+            </div>
+            <div className="p-2">
+                <div className="text-[10px] font-black uppercase truncate text-white mb-1">{displayName}</div>
+                <div className="text-[8px] text-slate-400 line-clamp-4 leading-tight">{desc}</div>
+            </div>
+            <div className="absolute bottom-2 right-2 text-[12px] font-black text-cyan-400 bg-slate-950/50 px-1 rounded">
+                V_{val}
+            </div>
+        </motion.div>
+    );
 }
