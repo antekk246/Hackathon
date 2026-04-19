@@ -5,6 +5,9 @@ Projekt autorskiej gry stworzony w ramach hackathonu **ETHSilesia 2026** dla **P
 ## O projekcie
 Aplikacja została zbudowana jako nowoczesna platforma gamingowa integrująca mechaniki gry z ekosystemem bankowym. Projekt wykorzystuje architekturę monorepo z backendem w języku Go oraz frontendem w React + Vite. Baza danych PostgreSQL.
 
+## Demo
+[![Demo gry](https://img.youtube.com/vi/oG44zRt30tY/maxresdefault.jpg)](https://youtu.be/oG44zRt30tY)
+
 ## Autorzy (kolejność alfabetyczna)
 * **Jan Grzymkowski**
 * **Franek Krumschmidt**
