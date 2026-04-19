@@ -3,7 +3,6 @@ package domain
 import (
 	"backend/internal/models"
 	"errors"
-	"fmt"
 
 	"gorm.io/gorm"
 )
@@ -99,7 +98,7 @@ func (r *gormCardRepo) UpgradeCardInstance(userID uint, instanceID uint) error {
 			// Sprawdzamy, czy to faktycznie brak rekordu, czy inny błąd (np. błąd SQL lub relacji)
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				// Możesz dodać logowanie, żeby zobaczyć jakich ID szukał:
-				errors.New("Nie znaleziono karty instancji! Szukano: instanceID= " + fmt.Sprint(instanceID) + " userID=" + fmt.Sprint(userID))
+				//errors.New("Nie znaleziono karty instancji! Szukano: instanceID= " + fmt.Sprint(instanceID) + " userID=" + fmt.Sprint(userID))
 				return errors.New("card instance not found or doesn't belong to you")
 			}
 			// Jeśli to inny błąd GORMa (np. problem z Preload), zwróćmy go, żeby go zobaczyć!
