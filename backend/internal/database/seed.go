@@ -156,8 +156,34 @@ func Seed(db *gorm.DB) error {
             }`)),
 		},
 	}
-	for _, e := range enemies {
-		db.Where("enemy_content = ?", e.EnemyContent).FirstOrCreate(&e)
+
+	for i := range enemies {
+		db.Where("enemy_content = ?", enemies[i].EnemyContent).FirstOrCreate(&enemies[i])
+	}
+
+	// 4. SCENARIUSZE WALK (Encounters)
+	encounters := []models.Encounter{
+		{
+			Level:       1,
+			IsBoss:      false,
+			Description: "Podejrzany SMS - standardowa próba phishingu.",
+			EnemyID:     enemies[0].ID,
+		},
+		{
+			Level:       2,
+			IsBoss:      false,
+			Description: "Awarie się zdarzają. Trzeba zapłacić.",
+			EnemyID:     enemies[1].ID,
+		},
+		{
+			Level:       3,
+			IsBoss:      true,
+			Description: "Walka z Bossem: Staroszkolny handlarz.",
+			EnemyID:     enemies[2].ID,
+		},
+	}
+	for i := range encounters {
+		db.Where("description = ?", encounters[i].Description).FirstOrCreate(&encounters[i])
 	}
 
 	// 4. Testowy użytkownik z talii startowej (10 kart)
