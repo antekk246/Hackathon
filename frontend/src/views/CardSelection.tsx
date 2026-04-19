@@ -118,16 +118,26 @@ export function CardSelection({
                     <div className="w-1/2 p-6 border-r border-slate-700 overflow-y-auto custom-scroll">
                         <h2 className="text-2xl font-bold text-white mb-4 italic uppercase">{t('selection.yourCards')}</h2>
                         <div className="space-y-3">
-                            {inventory.map(userCard => (
-                                <AvailableCardItem
-                                    key={`avail-${userCard.instanceId}`}
-                                    userCard={userCard}
-                                    isSelected={selectedCards.some(c => c.instanceId === userCard.instanceId)}
-                                    isSelectable={canAddMore || selectedCards.some(c => c.instanceId === userCard.instanceId)}
-                                    onSelect={() => handleAddCard(userCard)}
-                                    lang={i18n.language}
-                                />
-                            ))}
+                            {inventory.map(userCard => {
+                                const isSelected = selectedCards.some(c => c.instanceId === userCard.instanceId);
+                                return (
+                                    <AvailableCardItem
+                                        key={`avail-${userCard.instanceId}`}
+                                        userCard={userCard}
+                                        isSelected={isSelected}
+                                        isSelectable={canAddMore || isSelected}
+                                        onSelect={() => {
+                                            // TĄ CZĘŚĆ ZMIENIAMY: Logika przełącznika (Toggle)
+                                            if (isSelected) {
+                                                handleRemoveCard(userCard.instanceId);
+                                            } else {
+                                                handleAddCard(userCard);
+                                            }
+                                        }}
+                                        lang={i18n.language}
+                                    />
+                                );
+                            })}
                         </div>
                     </div>
 
