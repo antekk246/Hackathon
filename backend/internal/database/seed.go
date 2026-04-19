@@ -23,20 +23,19 @@ func Seed(db *gorm.DB) error {
 
 	// 2. Definicja kart (Podstawowe + Dodatkowe do 15 sztuk)
 	// UWAGA: UpgradeToID można dodać analogicznie jak w poprzednim przykładzie
-	// 2. Definicja kart (Simplified: Attack, Defend, Draw)
 	cards := []models.Card{
 		// --- ZESTAW PODSTAWOWY (STARTOWY) ---
 		{
 			Name:        "Gotówka|Cash",
 			TypeID:      &cardTypes[0].ID,
-			Description: "Atak za 50 PLN.",
-			CardAction:  datatypes.JSON([]byte(`{"action": "attack", "value": 50}`)),
+			Description: "Spłacasz 50 PLN problemu.",
+			CardAction:  datatypes.JSON([]byte(`{"action": "damage", "value": 50}`)),
 		},
 		{
-			Name:        "Konto Oszczędnościowe",
+			Name:        "Konto Oszczędnościowe|Savings Account",
 			TypeID:      &cardTypes[1].ID,
-			Description: "Zyskaj 50 PLN Obrony.",
-			CardAction:  datatypes.JSON([]byte(`{"action": "defend", "value": 50}`)),
+			Description: "Zyskaj 50 PLN Poduszki Finansowej.",
+			CardAction:  datatypes.JSON([]byte(`{"action": "block", "value": 50}`)),
 		},
 		{
 			Name:        "Szybka Analiza",
@@ -44,92 +43,94 @@ func Seed(db *gorm.DB) error {
 			Description: "Dobierz 2 karty.",
 			CardAction:  datatypes.JSON([]byte(`{"action": "draw", "value": 2}`)),
 		},
-
-		// --- KARTY DODATKOWE ---
 		{
-			Name:        "Przelew Ekspresowy",
-			TypeID:      &cardTypes[0].ID,
-			Description: "Mocny atak za 80 PLN.",
-			CardAction:  datatypes.JSON([]byte(`{"action": "attack", "value": 80}`)),
+			Name:        "Porada Eksperta",
+			TypeID:      &cardTypes[2].ID,
+			Description: "Zyskaj +1 Akcję i 30 PLN Poduszki. (Wyczerpanie)",
+			CardAction:  datatypes.JSON([]byte(`{"action": "multi", "energy": 1, "block": 30, "exhaust": true}`)),
 		},
+
+		// --- KARTY DODATKOWE (DO ZDOBYCIA/KUPNA) ---
 		{
 			Name:        "Lokata Terminowa",
 			TypeID:      &cardTypes[1].ID,
-			Description: "Zyskaj 120 PLN Obrony.",
-			CardAction:  datatypes.JSON([]byte(`{"action": "defend", "value": 120}`)),
+			Description: "Zyskaj 120 PLN Poduszki. Koszt: 2 Akcje.",
+			CardAction:  datatypes.JSON([]byte(`{"action": "block", "value": 120, "cost": 2}`)),
 		},
 		{
-			Name:        "Inwestycja w Wiedzę",
-			TypeID:      &cardTypes[2].ID,
-			Description: "Dobierz 3 karty.",
-			CardAction:  datatypes.JSON([]byte(`{"action": "draw", "value": 3}`)),
-		},
-		{
-			Name:        "Płatność Blik",
+			Name:        "Przelew Ekspresowy",
 			TypeID:      &cardTypes[0].ID,
-			Description: "Szybki atak za 40 PLN.",
-			CardAction:  datatypes.JSON([]byte(`{"action": "attack", "value": 40}`)),
-		},
-		{
-			Name:        "Fundusz Awaryjny",
-			TypeID:      &cardTypes[1].ID,
-			Description: "Zyskaj 80 PLN Obrony.",
-			CardAction:  datatypes.JSON([]byte(`{"action": "defend", "value": 80}`)),
-		},
-		{
-			Name:        "Dywersyfikacja",
-			TypeID:      &cardTypes[0].ID,
-			Description: "Atak za 60 PLN.",
-			CardAction:  datatypes.JSON([]byte(`{"action": "attack", "value": 60}`)),
-		},
-		{
-			Name:        "Weryfikacja Dwuskładnikowa",
-			TypeID:      &cardTypes[1].ID,
-			Description: "Zyskaj 40 PLN Obrony.",
-			CardAction:  datatypes.JSON([]byte(`{"action": "defend", "value": 40}`)),
+			Description: "Natychmiast spłacasz 80 PLN długu.",
+			CardAction:  datatypes.JSON([]byte(`{"action": "damage", "value": 80}`)),
 		},
 		{
 			Name:        "Budżet Domowy",
 			TypeID:      &cardTypes[2].ID,
-			Description: "Dobierz 1 kartę.",
-			CardAction:  datatypes.JSON([]byte(`{"action": "draw", "value": 1}`)),
+			Description: "W tej turze wszystkie karty 'Gotówka' są o 20% skuteczniejsze.",
+			CardAction:  datatypes.JSON([]byte(`{"action": "buff_cash", "value": 1.2}`)),
+		},
+		{
+			Name:        "Inwestycja w Wiedzę",
+			TypeID:      &cardTypes[2].ID,
+			Description: "Dobierz 3 karty. Odrzuć 1.",
+			CardAction:  datatypes.JSON([]byte(`{"action": "draw_discard", "draw": 3, "discard": 1}`)),
+		},
+		{
+			Name:        "Weryfikacja Dwuskładnikowa",
+			TypeID:      &cardTypes[1].ID,
+			Description: "Zyskaj 40 PLN Poduszki. Następny atak wroga jest o 50% słabszy.",
+			CardAction:  datatypes.JSON([]byte(`{"action": "block_weaken", "value": 40}`)),
 		},
 		{
 			Name:        "Zwrot Podatku",
 			TypeID:      &cardTypes[0].ID,
-			Description: "Atak za 100 PLN.",
-			CardAction:  datatypes.JSON([]byte(`{"action": "attack", "value": 100}`)),
+			Description: "Zadaj 150 PLN obrażeń. (Można użyć tylko jeśli masz >200 PLN Poduszki).",
+			CardAction:  datatypes.JSON([]byte(`{"action": "conditional_damage", "value": 150, "req": 200}`)),
+		},
+		{
+			Name:        "Aplikacja Mobilna IKO",
+			TypeID:      &cardTypes[2].ID,
+			Description: "Zmniejsz koszt następnej karty w tej turze do 0.",
+			CardAction:  datatypes.JSON([]byte(`{"action": "reduce_cost"}`)),
+		},
+		{
+			Name:        "Fundusz Awaryjny",
+			TypeID:      &cardTypes[1].ID,
+			Description: "Zmień całą posiadaną Gotówkę na ręce w Poduszkę (1:1).",
+			CardAction:  datatypes.JSON([]byte(`{"action": "convert_hand"}`)),
+		},
+		{
+			Name:        "Dywersyfikacja",
+			TypeID:      &cardTypes[2].ID,
+			Description: "Zadaj 40 obrażeń i zyskaj 40 Poduszki.",
+			CardAction:  datatypes.JSON([]byte(`{"action": "hybrid", "dmg": 40, "block": 40}`)),
 		},
 		{
 			Name:        "Asystent AI",
 			TypeID:      &cardTypes[2].ID,
-			Description: "Dobierz 4 karty.",
-			CardAction:  datatypes.JSON([]byte(`{"action": "draw", "value": 4}`)),
+			Description: "Podejrzyj 3 pierwsze karty z talii. Wybierz jedną na rękę.",
+			CardAction:  datatypes.JSON([]byte(`{"action": "scry", "value": 3}`)),
 		},
 		{
-			Name:        "Aplikacja Mobilna IKO",
-			TypeID:      &cardTypes[1].ID,
-			Description: "Zyskaj 70 PLN Obrony.",
-			CardAction:  datatypes.JSON([]byte(`{"action": "defend", "value": 70}`)),
-		},
-		{
-			Name:        "Premia Kwartalna",
+			Name:        "Płatność Blik",
 			TypeID:      &cardTypes[0].ID,
-			Description: "Atak za 150 PLN.",
-			CardAction:  datatypes.JSON([]byte(`{"action": "attack", "value": 150}`)),
+			Description: "Szybki atak za 40. Jeśli to wykończy wroga, dobierz kartę.",
+			CardAction:  datatypes.JSON([]byte(`{"action": "execute", "value": 40}`)),
 		},
 	}
 
 	for i := range cards {
 		db.Where("name = ?", cards[i].Name).FirstOrCreate(&cards[i])
 	}
+
+	// 3. Przeciwnicy (Zgodnie z Twoją specyfikacją)
 	enemies := []models.Enemy{
 		{
 			EnemyLevel: 1,
 			IsBoss:     false,
-			BaseHealth: 150, // <-- Dodane dla łatwiejszego inicjowania walki!
 			EnemyContent: datatypes.JSON([]byte(`{
                 "name": "Fałszywy SMS", 
+                "hp": 150, 
                 "dmg": 40, 
                 "desc": "Próbuje wyłudzić drobne kwoty."
             }`)),
@@ -137,9 +138,9 @@ func Seed(db *gorm.DB) error {
 		{
 			EnemyLevel: 2,
 			IsBoss:     false,
-			BaseHealth: 350,
 			EnemyContent: datatypes.JSON([]byte(`{
                 "name": "Nagła Naprawa Roweru", 
+                "hp": 350, 
                 "dmg": 120, 
                 "pattern": "strong_attack_then_cooldown"
             }`)),
@@ -147,41 +148,16 @@ func Seed(db *gorm.DB) error {
 		{
 			EnemyLevel: 3,
 			IsBoss:     true,
-			BaseHealth: 600,
 			EnemyContent: datatypes.JSON([]byte(`{
                 "name": "Nieuczciwy Sprzedawca", 
+                "hp": 600,
                 "dmg": 60, 
                 "special": "Ukryta Opłata (Trash Card)"
             }`)),
 		},
 	}
-	for i := range enemies {
-		db.Where("enemy_content = ?", enemies[i].EnemyContent).FirstOrCreate(&enemies[i])
-	}
-
-	// 4. SCENARIUSZE WALK (Encounters)
-	encounters := []models.Encounter{
-		{
-			Level:       1,
-			IsBoss:      false,
-			Description: "Podejrzany SMS - standardowa próba phishingu.",
-			EnemyID:     enemies[0].ID,
-		},
-		{
-			Level:       2,
-			IsBoss:      false,
-			Description: "Awarie się zdarzają. Trzeba zapłacić.",
-			EnemyID:     enemies[1].ID,
-		},
-		{
-			Level:       3,
-			IsBoss:      true,
-			Description: "Walka z Bossem: Staroszkolny handlarz.",
-			EnemyID:     enemies[2].ID,
-		},
-	}
-	for i := range encounters {
-		db.Where("description = ?", encounters[i].Description).FirstOrCreate(&encounters[i])
+	for _, e := range enemies {
+		db.Where("enemy_content = ?", e.EnemyContent).FirstOrCreate(&e)
 	}
 
 	// 4. Testowy użytkownik z talii startowej (10 kart)
