@@ -48,31 +48,30 @@ func SetupRouter(authH *handler.AuthHandler, adventureH *handler.AdventureHandle
 			// Adventure routes
 			adventures := protected.Group("/adventures")
 			{
-				// Zarządzanie cyklem życia przygody
+				//adventure lifecycle management
 				adventures.POST("", adventureH.StartAdventure)
 				adventures.GET("/active", adventureH.GetActiveAdventure)
 				adventures.POST("/end", adventureH.EndUsersAdventure)
-				// Mechanika poruszania się po mapie
+				// adventure progression and actions
 				adventures.GET("/room", adventureH.GetCurrentRoom)
 				adventures.POST("/advance", adventureH.AdvanceRoom)
 				adventures.POST("/play/:instanceID", adventureH.PlayCard)
 				adventures.POST("/end-turn", adventureH.EndTurn)
 				adventures.POST("/start-turn", adventureH.StartTurn)
 
-				// Pobiera dynamiczny stan kart: Hand, Draw Pile, Discard Pile oraz HP/Manę
+				// adventure state and info
 				adventures.GET("/room/state", adventureH.GetFullBattleState)
 			}
-			// GRUPA: Karty (Zarządzanie ekwipunkiem i ekonomią poza walką)
+			// Card routes
 			cards := protected.Group("/cards")
 			{
-				// Przeglądanie zasobów
-				cards.GET("/", cardH.GetAllCards)                    // Pobiera katalog wszystkich kart dostępnych w grze
-				cards.GET("/user", cardH.GetUserCards)               // Pobiera prywatną kolekcję kart zalogowanego gracza
-				cards.GET("/adventure/:id", cardH.GetAdventureCards) // Pobiera tylko te karty, które gracz zabrał na daną przygodę
-
-				// id to numer instancj
+				//
+				cards.GET("/", cardH.GetAllCards)
+				cards.GET("/user", cardH.GetUserCards)
+				cards.GET("/adventure/:id", cardH.GetAdventureCards)
+				// id is the instance ID of the card in the adventure, not the base card ID
 				cards.POST("/:id/upgrade", cardH.Upgrade)
-				cards.POST("/:id/buy", cardH.BuyCard) // Kupuje nową kartę i dodaje ją do kolekcji gracza
+				cards.POST("/:id/buy", cardH.BuyCard)
 			}
 		}
 	}

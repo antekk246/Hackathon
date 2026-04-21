@@ -2,46 +2,42 @@ package models
 
 import "gorm.io/datatypes"
 
-// --- AKTYWNA SESJA (Konkretna walka gracza, tworzona w Create) ---
-
 type Fight struct {
 	ID uint `gorm:"primaryKey" json:"id"`
 
-	// Stan talii gracza w trakcie tej konkretnej walki
-	Cards       datatypes.JSON `json:"cards"`       // Karty na ręce (np. [1, 4, 7])
-	UsedCards   datatypes.JSON `json:"usedCards"`   // Stos odrzuconych (discard pile)
-	CardsInDeck datatypes.JSON `json:"cardsInDeck"` // Talia dobierania (draw pile)
+	// card state management using json arrays of ids
+	Cards       datatypes.JSON `json:"cards"`       // hand
+	UsedCards   datatypes.JSON `json:"usedCards"`   // discard pile
+	CardsInDeck datatypes.JSON `json:"cardsInDeck"` // draw pile
 
-	// Stan parametrów w trakcie tury
+	// turn resources and state
 	PlayerTurn     bool `json:"playerTurn"`
-	DecisionPoints uint `json:"decisionPoints"` // Mana/Akcje
+	DecisionPoints uint `json:"decisionPoints"`
 
-	// ZDROWIE: Aktualny stan gracza i wroga
+	// combat vital stats
 	CurrentPlayerHealth uint `json:"currentPlayerHealth"`
-	CurrentPlayerShield uint `json:"currentPlayerShield"` // Nowa wartość dla tarczy
+	CurrentPlayerShield uint `json:"currentPlayerShield"`
 	CurrentEnemyHealth  uint `json:"currentEnemyHealth"`
 	MaxEnemyHealth      uint `json:"maxEnemyHealth"`
 
-	// Link do szablonu potwora (żeby frontend mógł pobrać jego nazwę, obrazek itp.)
+	// relations
 	EnemyID uint   `json:"enemyId"`
 	Enemy   *Enemy `gorm:"foreignKey:EnemyID" json:"enemy,omitempty"`
 }
-
-// --- SZABLONY (Wzorce do losowania, definiowane w seed.go) ---
 
 type Enemy struct {
 	ID           uint           `gorm:"primaryKey" json:"id"`
 	IsBoss       bool           `json:"isBoss"`
 	EnemyLevel   uint           `json:"enemyLevel"`
-	BaseHealth   uint           `json:"baseHealth"`   // Ułatwia pobranie startowego HP!
-	EnemyContent datatypes.JSON `json:"enemyContent"` // np. {"name": "Fałszywy SMS", "dmg": 40}
+	BaseHealth   uint           `json:"baseHealth"`
+	EnemyContent datatypes.JSON `json:"enemyContent"` // contains visual and move metadata
 }
 
 type Encounter struct {
 	ID          uint   `gorm:"primaryKey" json:"id"`
 	Level       uint   `json:"level"`
 	IsBoss      bool   `json:"isBoss"`
-	Description string `json:"description"` // np. "Zasadzka w ciemnym zaułku"
+	Description string `json:"description"`
 	EnemyID     uint   `json:"enemyId"`
 	Enemy       *Enemy `gorm:"foreignKey:EnemyID" json:"enemy,omitempty"`
 }

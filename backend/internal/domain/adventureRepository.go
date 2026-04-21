@@ -48,12 +48,10 @@ func (r *gormAdventureRepo) Create(adventure *models.Adventure) error {
 	roomCount := 5 * adventure.Level
 
 	return r.DB.Transaction(func(tx *gorm.DB) error {
-		// Omit chroni przed modyfikacją tabeli źródłowej kart
 		if err := tx.Omit("Cards.*").Create(adventure).Error; err != nil {
 			return err
 		}
-
-		// 1. ZBUDUJ I POTASUJ TALIĘ GRACZA
+		//building starting deck and hand
 		var startingDeck []uint
 		for _, card := range adventure.Cards {
 			startingDeck = append(startingDeck, card.ID)
@@ -74,7 +72,7 @@ func (r *gormAdventureRepo) Create(adventure *models.Adventure) error {
 		initialHand = startingDeck[:handSize]
 		remainingDeck = startingDeck[handSize:]
 
-		// Serializacja
+		// serialization
 		handBytes, _ := json.Marshal(initialHand)
 		deckBytes, _ := json.Marshal(remainingDeck)
 
@@ -85,7 +83,7 @@ func (r *gormAdventureRepo) Create(adventure *models.Adventure) error {
 		var lastRoomID *uint
 		advLevel := adventure.Level
 
-		// 2. GENEROWANIE POKOI
+		//room generation
 		for i := roomCount; i > 0; i-- {
 			specificLevel := advLevel + uint(rand.Intn(3))
 			isBossRoom := (i == roomCount)
@@ -110,7 +108,7 @@ func (r *gormAdventureRepo) Create(adventure *models.Adventure) error {
 			if roomType == "fight" {
 				var encounterIDs []uint
 
-				// Szukamy odpowiednich zasianych scenariuszy
+				// look for encounters matching the specific level and boss status
 				err := tx.Model(&models.Encounter{}).
 					Where("level = ? AND is_boss = ?", specificLevel, isBossRoom).
 					Pluck("id", &encounterIDs).Error
@@ -129,28 +127,25 @@ func (r *gormAdventureRepo) Create(adventure *models.Adventure) error {
 					}
 				}
 
-				// Losujemy scenariusz
 				randomEncounterID := encounterIDs[rand.Intn(len(encounterIDs))]
 
-				// Pobieramy scenariusz Z DOŁĄCZONYM POTWOREM (Preload), żeby odczytać jego BaseHealth
 				var selectedEncounter models.Encounter
 				if err := tx.Preload("Enemy").First(&selectedEncounter, randomEncounterID).Error; err != nil {
 					return fmt.Errorf("failed to load encounter details: %w", err)
 				}
 
-				// 3. TWORZYMY AKTYWNĄ INSTANCJĘ WALKI (FIGHT)
+				// create fight based on the selected encounter and the adventure's starting deck/hand
 				fight := models.Fight{
 					EnemyID:             selectedEncounter.EnemyID,
 					PlayerTurn:          true,
-					DecisionPoints:      2, // Startowa mana/punkty akcji gracza
+					DecisionPoints:      2,
 					CurrentPlayerHealth: adventure.PlayerHealth,
 
-					// Skoro pobraliśmy potwora (Preload), możemy przypisać mu startowe HP!
 					CurrentEnemyHealth: selectedEncounter.Enemy.BaseHealth,
 					MaxEnemyHealth:     selectedEncounter.Enemy.BaseHealth,
 
-					Cards:       handJSON, // 4 wylosowane karty na ręce
-					CardsInDeck: deckJSON, // Reszta kart w talii
+					Cards:       handJSON,
+					CardsInDeck: deckJSON,
 					UsedCards:   emptyJSON,
 				}
 
@@ -160,7 +155,7 @@ func (r *gormAdventureRepo) Create(adventure *models.Adventure) error {
 				room.FightID = &fight.ID
 
 			} else {
-				// Tworzenie Eventu
+				// event creattion
 				reward := models.Reward{
 					RewardLevel:   specificLevel,
 					RewardContent: datatypes.JSON([]byte(fmt.Sprintf(`{"gold": %d}`, specificLevel*25))),
@@ -171,7 +166,7 @@ func (r *gormAdventureRepo) Create(adventure *models.Adventure) error {
 
 				event := models.Event{
 					RewardID:    &reward.ID,
-					CardsOnHand: handJSON, // Podpinamy karty
+					CardsOnHand: handJSON,
 				}
 				if err := tx.Create(&event).Error; err != nil {
 					return err

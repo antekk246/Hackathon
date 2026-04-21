@@ -26,24 +26,23 @@ func NewAuthHandler(repo domain.UserRepository, config *oauth2.Config) *AuthHand
 	}
 }
 
-// User hits /api/v1/auth/google/login
 func (h *AuthHandler) GoogleLogin(c *gin.Context) {
 	url := h.OauthConfig.AuthCodeURL("random_state_string")
 	c.Redirect(http.StatusTemporaryRedirect, url)
 }
+
 func (h *AuthHandler) GoogleCallback(c *gin.Context) {
 	code := c.Query("code")
 	token, err := h.OauthConfig.Exchange(c, code)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Błąd wymiany kodu"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "code exchange failed"})
 		return
 	}
 
-	// user data fetch
 	client := h.OauthConfig.Client(c, token)
 	resp, err := client.Get("https://www.googleapis.com/oauth2/v3/userinfo")
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Błąd pobierania danych użytkownika"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch user info"})
 		return
 	}
 	defer resp.Body.Close()
@@ -54,61 +53,58 @@ func (h *AuthHandler) GoogleCallback(c *gin.Context) {
 		Name  string `json:"name"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&googleUser); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Błąd dekodowania danych użytkownika"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to decode user info"})
 		return
 	}
 
 	user, err := h.UserRepo.GetByOAuthID(googleUser.Sub)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-
+			// create new user if not found
 			user = &models.User{
 				Username: googleUser.Name,
 				Email:    googleUser.Email,
-				OAuthID:  googleUser.Sub, // <-- TO ZAPOBIEGA BŁĘDOWI DUPLIKATU (ustawia unikalne ID zamiast pustego stringa "")
-				Money:    900,            // (Opcjonalnie) Możesz dać graczowi trochę złota na start!
+				OAuthID:  googleUser.Sub,
+				Money:    900,
 			}
 
-			// Zapisujemy do bazy i sprawdzamy, czy zapis się powiódł
 			if err := h.UserRepo.Create(user); err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Nie udało się utworzyć konta użytkownika"})
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "user creation failed"})
 				return
 			}
-
 		} else {
-			// Jeśli to prawdziwy błąd bazy (np. zerwane połączenie)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Błąd bazy danych"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
 			return
 		}
 	}
-	// Generujemy Wasz token JWT
+
 	appToken, err := jwtutil.GenerateToken(user.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Token generation failed"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "token generation failed"})
 		return
 	}
 
-	// Dynamiczne przekierowanie: najpierw szukamy w środowisku, potem w Origin, na końcu default
+	// determine frontend redirect url based on environment
 	frontendURL := os.Getenv("FRONTEND_URL")
 	if frontendURL == "" {
 		frontendURL = c.Request.Header.Get("Origin")
 	}
 	if frontendURL == "" {
-		frontendURL = "http://localhost:5173" // Fallback dla lokalnego dev
+		frontendURL = "http://localhost:5173"
 	}
 
 	redirectURL := frontendURL + "/?token=" + appToken
 	c.Redirect(http.StatusTemporaryRedirect, redirectURL)
 }
+
 func (h *AuthHandler) GetMe(c *gin.Context) {
-	// 1. Pobierz ID z kontekstu (ustawione przez middleware JWT)
 	val, exists := c.Get("userID")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Brak autoryzacji - zaloguj się ponownie"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
 
-	// 2. Rzutowanie typu - middleware zazwyczaj przechowuje to jako uint lub float64 (z JSON)
+	// handle type assertion for various jwt id formats
 	var userID uint
 	switch v := val.(type) {
 	case uint:
@@ -116,17 +112,15 @@ func (h *AuthHandler) GetMe(c *gin.Context) {
 	case float64:
 		userID = uint(v)
 	default:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Błędny format ID użytkownika"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user id format"})
 		return
 	}
 
-	// 3. Pobierz użytkownika korzystając z nowej metody Repo
 	user, err := h.UserRepo.GetByID(userID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Użytkownik nie istnieje w bazie danych"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
 		return
 	}
 
-	// 4. Sukces! Zwracamy obiekt użytkownika (Frontend dostanie Money i Cards)
 	c.JSON(http.StatusOK, user)
 }
