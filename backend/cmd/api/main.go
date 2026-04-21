@@ -41,13 +41,12 @@ func main() {
 		sqlDB.SetMaxOpenConns(100)
 		sqlDB.SetConnMaxLifetime(time.Hour)
 	}
-
-	// --- DODAJ TO: Czyszczenie bazy danych na starcie ---
+	//dropping database to ensure clean state on each run, can be removed in production
 	log.Println("Czyszczenie bazy danych (Drop Tables)...")
 	err = db.Migrator().DropTable(
 		"adventure_cards", // many 2 many
 		"adventure_buffs",
-		&models.UserCard{}, // Najpierw tabele łączące (FK)
+		&models.UserCard{},
 		&models.Fight{},
 		&models.Room{},
 		&models.Adventure{},
@@ -64,10 +63,10 @@ func main() {
 		log.Fatalf("Błąd podczas czyszczenia bazy: %v", err)
 	}
 	err = db.AutoMigrate(
-		&models.CardType{}, // Migrate types first
-		&models.Card{},     // Then base cards
-		&models.User{},     // Then users
-		&models.UserCard{}, // FINALLY the link table
+		&models.CardType{},
+		&models.Card{},
+		&models.User{},
+		&models.UserCard{},
 		&models.Enemy{},
 		&models.Reward{},
 		&models.Adventure{},

@@ -41,7 +41,7 @@ func (h *CardHandler) GetUserCards(c *gin.Context) {
 	}
 
 	//cards, err := h.CardRepo.GetByUserID(userID.(uint))
-	cards, err := h.CardRepo.GetUserCards(userID.(uint)) // This returns []UserCard with preloaded Card data
+	cards, err := h.CardRepo.GetUserCards(userID.(uint))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user cards"})
 		return
@@ -51,14 +51,14 @@ func (h *CardHandler) GetUserCards(c *gin.Context) {
 
 // GetAdventureCards - GET /api/v1/cards/adventure/:id
 func (h *CardHandler) GetAdventureCards(c *gin.Context) {
-	// 1. Get UserID from JWT (Middleware set this)
+	// get UserID from JWT (Middleware set this)
 	userID, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
 
-	// 2. Parse Adventure ID from URL
+	// parse Adventure ID from URL
 	idParam := c.Param("id")
 	adventureID, err := strconv.ParseUint(idParam, 10, 32)
 	if err != nil {
@@ -73,8 +73,7 @@ func (h *CardHandler) GetAdventureCards(c *gin.Context) {
 		return
 	}
 
-	// 4. Handle Case: Adventure doesn't exist or doesn't belong to user
-	// In GORM, if no records match the WHERE, it returns an empty slice and no error.
+	// handle Case: Adventure doesnt exist or doesn't belong to user
 	if len(cards) == 0 {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied or adventure empty"})
 		return

@@ -75,8 +75,7 @@ func (r *gormCardRepo) GetByUserID(userID uint) ([]models.Card, error) {
 
 func (r *gormCardRepo) GetUserCards(userID uint) ([]models.UserCard, error) {
 	var userCards []models.UserCard
-
-	// Używamy Preload, aby GORM od razu zaciągnął dane archetypu do pola "Card"
+	// This fetches the UserCard entries, which include the specific instances of cards owned by the user
 	err := r.DB.Preload("Card").Where("user_id = ?", userID).Find(&userCards).Error
 
 	return userCards, err
@@ -100,20 +99,16 @@ func (r *gormCardRepo) UpgradeCardInstance(userID uint, instanceID uint) error {
 	return r.DB.Transaction(func(tx *gorm.DB) error {
 		var userCard models.UserCard
 
-		// 1. Find the specific card copy owned by the user
+		// Find the specific card copy owned by the user
 		//if err := tx.Preload("Card.UpgradeTo").Where("id = ? AND user_id = ?", instanceID, userID).First(&userCard).Error; err != nil {
 		//	return errors.New("card instance not found")
 		//}
 
-		// Zmień ten fragment w UpgradeCardInstance:
 		if err := tx.Preload("Card").Where("id = ? AND user_id = ?", instanceID, userID).First(&userCard).Error; err != nil {
-			// Sprawdzamy, czy to faktycznie brak rekordu, czy inny błąd (np. błąd SQL lub relacji)
 			if errors.Is(err, gorm.ErrRecordNotFound) {
-				// Możesz dodać logowanie, żeby zobaczyć jakich ID szukał:
 				log.Printf("Nie znaleziono karty instancji! Szukano: instanceID= %d userID= %d", instanceID, userID)
 				return errors.New("card instance not found or doesn't belong to you")
 			}
-			// Jeśli to inny błąd GORMa (np. problem z Preload), zwróćmy go, żeby go zobaczyć!
 			return errors.New("database query error: " + err.Error())
 		}
 
@@ -122,7 +117,7 @@ func (r *gormCardRepo) UpgradeCardInstance(userID uint, instanceID uint) error {
 			return errors.New("this card is already max level")
 		}
 
-		// 2. Check User Money
+		// Check User Money
 		var user models.User
 		if err := tx.First(&user, userID).Error; err != nil {
 			return errors.New("nie udało się pobrać danych gracza")
@@ -133,7 +128,7 @@ func (r *gormCardRepo) UpgradeCardInstance(userID uint, instanceID uint) error {
 			return errors.New("poor gamer alert: insufficient funds")
 		}
 
-		// 3. Deduct Money and Upgrade the Card
+		// Deduct Money and Upgrade the Card
 		if err := tx.Model(&user).Update("Money", user.Money-userCard.Card.UpgradeCost).Error; err != nil {
 			return fmt.Errorf("błąd podczas pobierania opłaty: %w", err)
 		}
@@ -142,7 +137,7 @@ func (r *gormCardRepo) UpgradeCardInstance(userID uint, instanceID uint) error {
 			return fmt.Errorf("błąd podczas ewolucji karty: %w", err)
 		}
 
-		log.Printf("✅ [UPGRADE] Sukces! Gracz %d ulepszył instancję %d z karty bazowej ID %d na kartę bazową ID %d",
+		log.Printf(" [UPGRADE] Sukces! Gracz %d ulepszył instancję %d z karty bazowej ID %d na kartę bazową ID %d",
 			userID, instanceID, userCard.CardID, *userCard.Card.UpgradeToID)
 
 		// Just update the CardID on this specific instance row!
@@ -151,53 +146,33 @@ func (r *gormCardRepo) UpgradeCardInstance(userID uint, instanceID uint) error {
 	})
 }
 
-// func (r *gormCardRepo) VerifyUserOwnsCards(userID uint, cardIDs []uint) error {
-// 	var count int64
-// 	// Check the join table for user ownership
-// 	err := r.DB.Table("user_cards").
-// 		Where("user_id = ? AND card_id IN ?", userID, cardIDs).
-// 		Count(&count).Error
-
-// 	if err != nil {
-// 		return err
-// 	}
-// 	if count != int64(len(cardIDs)) {
-// 		return errors.New("one or more cards are not owned by the user")
-// 	}
-// 	return nil
-// }
-
 // new VerifyUserOwnsCards that counts duplicates properly
 func (r *gormCardRepo) VerifyUserOwnsCards(userID uint, requestedCardIDs []uint) error {
-	// 1. Liczymy, ile sztuk KAŻDEJ karty gracz chce wziąć na wyprawę
-	// Np. map[5: 2, 8: 1] -> "Chcę dwie karty ID 5 i jedną ID 8"
+	// count how many of each card ID the user wants to take
 	requiredCounts := make(map[uint]int)
 	for _, id := range requestedCardIDs {
 		requiredCounts[id]++
 	}
 
-	// 2. Pobieramy WSZYSTKIE instancje kart z plecaka gracza
+	// fetch all UserCard entries for the user to see what they actually own
 	var userCards []models.UserCard
 	if err := r.DB.Where("user_id = ?", userID).Find(&userCards).Error; err != nil {
 		return fmt.Errorf("błąd pobierania ekwipunku: %w", err)
 	}
 
-	// 3. Liczymy, ile sztuk danej karty gracz FAKTYCZNIE posiada w bazie
+	// count how many of each card ID the user actually owns
 	ownedCounts := make(map[uint]int)
 	for _, uc := range userCards {
 		ownedCounts[uc.CardID]++
 	}
 
-	// 4. Konfrontujemy to, co gracz chce wziąć, z tym, co rzeczywiście ma
+	// compare required counts with owned counts
 	for cardID, requiredAmount := range requiredCounts {
 		ownedAmount := ownedCounts[cardID]
 		if ownedAmount < requiredAmount {
-			// Zwracamy bardzo szczegółowy błąd, żeby w razie czego wiedzieć co nie zagrało!
 			return fmt.Errorf("brakuje karty bazowej o ID %d (chcesz wziąć: %d, a posiadasz tylko: %d)",
 				cardID, requiredAmount, ownedAmount)
 		}
 	}
-
-	// Wszystko się zgadza, gracz ma odpowiednią liczbę duplikatów!
 	return nil
 }

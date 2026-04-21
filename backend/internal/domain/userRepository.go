@@ -43,8 +43,7 @@ func (r *gormUserRepo) BuyCard(userID uint, cardID uint) error {
 	return r.DB.Transaction(func(tx *gorm.DB) error {
 		var user models.User
 		var card models.Card
-
-		// 1. Pobierz usera i kartę z bazy
+		// fetch user and card to ensure they exist and to get the user's current money
 		if err := tx.First(&user, userID).Error; err != nil {
 			return err
 		}
@@ -52,7 +51,7 @@ func (r *gormUserRepo) BuyCard(userID uint, cardID uint) error {
 			return err
 		}
 
-		// 2. Cena (możesz użyć UpgradeCost z karty jako ceny zakupu)
+		// stubbed 100 for now, but should be card.UpgradeCost or something like that in the future
 		cost := uint(100)
 		if card.UpgradeCost > 0 {
 			cost = card.UpgradeCost
@@ -62,23 +61,16 @@ func (r *gormUserRepo) BuyCard(userID uint, cardID uint) error {
 			return errors.New("brak wystarczającej ilości XP")
 		}
 
-		// 3. Odejmij pieniądze w bazie
+		// deduct cost from user's money and save
 		user.Money -= cost
 		if err := tx.Save(&user).Error; err != nil {
 			return err
 		}
 
-		// 4. Utwórz nową instancję UserCard
 		newUserCard := models.UserCard{
 			UserID: user.ID,
 			CardID: card.ID,
 		}
-
-		// 5. Zapisz nową instancję w bazie
-		// Możesz użyć Append jak wcześniej (ale przekazując newUserCard):
-		// return tx.Model(&user).Association("Cards").Append(&newUserCard)
-
-		// Albo, co jest często prostsze i bezpieczniejsze przy takich strukturach:
 		if err := tx.Create(&newUserCard).Error; err != nil {
 			return err
 		}
@@ -90,12 +82,12 @@ func (r *gormUserRepo) BuyCard(userID uint, cardID uint) error {
 }
 func (r *gormUserRepo) Create(user *models.User) error {
 	return r.DB.Transaction(func(tx *gorm.DB) error {
-		// 1. Create the user first to get the generated ID
+		// Create the user first to get the generated ID
 		if err := tx.Create(user).Error; err != nil {
 			return err
 		}
 
-		// 2. Prepare the initial cards (IDs 1-10)
+		// Prepare the initial cards (IDs 1-10)
 		var userCards []models.UserCard
 		for i := uint(1); i <= 10; i++ {
 			userCards = append(userCards, models.UserCard{
@@ -104,7 +96,7 @@ func (r *gormUserRepo) Create(user *models.User) error {
 			})
 		}
 
-		// 3. Bulk insert the relation records
+		//Bulk insert the relation records
 		if err := tx.Create(&userCards).Error; err != nil {
 			return err
 		}
@@ -115,7 +107,6 @@ func (r *gormUserRepo) Create(user *models.User) error {
 
 func (r *gormUserRepo) GetByID(id uint) (*models.User, error) {
 	var user models.User
-	// Preloadujemy karty i przygodę, aby /me zwracało pełny stan gracza
 	err := r.DB.Preload("Cards").
 		Preload("Adventure").
 		First(&user, id).Error
